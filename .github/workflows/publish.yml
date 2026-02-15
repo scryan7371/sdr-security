@@ -41,3 +41,18 @@ jobs:
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish summary
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          {
+            echo "## Package Published"
+            echo ""
+            echo "- Package: \`@scryan7371/sdr-security\`"
+            echo "- Version: \`${VERSION}\`"
+            echo "- GitHub Packages: https://github.com/users/scryan7371/packages/npm/package/sdr-security"
+            echo "- User packages: https://github.com/scryan7371?tab=packages"
+            echo ""
+            echo "Install:"
+            echo "\`npm install @scryan7371/sdr-security@${VERSION} --registry=https://npm.pkg.github.com\`"
+          } >> "$GITHUB_STEP_SUMMARY"
