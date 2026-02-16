@@ -1,6 +1,6 @@
 {
   "name": "@scryan7371/sdr-security",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reusable auth/security capability for API and app clients.",
   "main": "dist/index.js",
   "exports": {
