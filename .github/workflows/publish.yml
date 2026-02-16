@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   publish:
@@ -21,8 +20,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          registry-url: https://npm.pkg.github.com
-          scope: "@scryan7371"
+          registry-url: https://registry.npmjs.org
           cache: "npm"
 
       - name: Install dependencies
@@ -38,9 +36,9 @@ jobs:
         run: npm run build
 
       - name: Publish package
-        run: npm publish
+        run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish summary
         run: |
@@ -50,9 +48,8 @@ jobs:
             echo ""
             echo "- Package: \`@scryan7371/sdr-security\`"
             echo "- Version: \`${VERSION}\`"
-            echo "- GitHub Packages: https://github.com/users/scryan7371/packages/npm/package/sdr-security"
-            echo "- User packages: https://github.com/scryan7371?tab=packages"
+            echo "- npm: https://www.npmjs.com/package/@scryan7371/sdr-security"
             echo ""
             echo "Install:"
-            echo "\`npm install @scryan7371/sdr-security@${VERSION} --registry=https://npm.pkg.github.com\`"
+            echo "\`npm install @scryan7371/sdr-security@${VERSION}\`"
           } >> "$GITHUB_STEP_SUMMARY"
