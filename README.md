@@ -210,3 +210,25 @@ Supported env vars:
   - `SECURITY_TEST_SCHEMA=your_schema_name` (use fixed schema name)
 
 See `.env.test.example` for a template.
+
+## Release Script
+
+You can automate version bump + tag + push with:
+
+```bash
+npm run release:patch
+npm run release:minor
+npm run release:major
+```
+
+What it does:
+
+1. Verifies clean git working tree
+2. Runs `npm test`
+3. Runs `npm run build`
+4. Bumps `package.json` + `package-lock.json`
+5. Commits as `chore(release): vX.Y.Z`
+6. Tags as `sdr-security-vX.Y.Z`
+7. Pushes commit and tag
+
+This tag format triggers `.github/workflows/publish.yml`.
