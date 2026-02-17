@@ -5,7 +5,7 @@ import { SecurityWorkflowsService } from "./security-workflows.service";
 const makeRepo = () => ({
   update: vi.fn(async () => ({ affected: 1 })),
   findOne: vi.fn(),
-  find: vi.fn(async () => []),
+  find: vi.fn(async (): Promise<Array<Record<string, unknown>>> => []),
   save: vi.fn(async (value: any) => value),
   create: vi.fn((value: any) => value),
   delete: vi.fn(async () => ({ affected: 1 })),

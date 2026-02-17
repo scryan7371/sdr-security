@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client, ClientConfig } from "pg";
 import { securityMigrations } from "../api/migrations";
@@ -45,7 +44,7 @@ const loadEnvFile = (filepath: string) => {
 
 const loadDotEnvDefaults = () => {
   const cwd = process.cwd();
-  const fileDir = path.dirname(fileURLToPath(import.meta.url));
+  const fileDir = __dirname;
   const projectRoot = path.resolve(fileDir, "../..");
 
   const candidates = [

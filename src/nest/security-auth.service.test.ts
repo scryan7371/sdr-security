@@ -26,7 +26,7 @@ const makeRepo = () => ({
   save: vi.fn(async (value: any) => value),
   create: vi.fn((value: any) => value),
   update: vi.fn(async () => ({ affected: 1 })),
-  find: vi.fn(async () => []),
+  find: vi.fn(async (): Promise<Array<Record<string, unknown>>> => []),
 });
 
 const makeNotifier = () => ({
