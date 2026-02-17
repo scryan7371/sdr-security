@@ -5,6 +5,8 @@
     "moduleResolution": "Node",
     "types": ["node"],
     "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "declaration": true,

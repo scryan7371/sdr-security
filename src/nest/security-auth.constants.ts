@@ -1,0 +1,1 @@
+export const SECURITY_AUTH_OPTIONS = Symbol("SECURITY_AUTH_OPTIONS");

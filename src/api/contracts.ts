@@ -45,3 +45,14 @@ export type RegisterResponse = {
 
 export type DebugTokenResponse = { success: true; debugToken?: string };
 export type DebugCodeResponse = { success: true; debugCode?: string };
+
+export type GenericSuccessResponse = { success: true };
+export type UserActiveResponse = {
+  success: true;
+  userId: string;
+  active: boolean;
+};
+export type AdminNotificationResponse = {
+  success: true;
+  notified: boolean;
+};

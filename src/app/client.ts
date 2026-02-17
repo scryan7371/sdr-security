@@ -1,9 +1,12 @@
 import type {
+  AdminNotificationResponse,
   AuthResponse,
   DebugCodeResponse,
   DebugTokenResponse,
+  GenericSuccessResponse,
   RoleCatalogResponse,
   RegisterResponse,
+  UserActiveResponse,
   UserRolesResponse,
 } from "../api/contracts";
 
@@ -55,13 +58,13 @@ export const createSecurityClient = (options: SecurityClientOptions) => {
       firstName?: string;
       lastName?: string;
     }) =>
-      request<RegisterResponse>("/auth/register", {
+      request<RegisterResponse>("/security/auth/register", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
 
     login: (payload: { email: string; password: string }) =>
-      request<AuthResponse>("/auth/login", {
+      request<AuthResponse>("/security/auth/login", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
@@ -73,7 +76,7 @@ export const createSecurityClient = (options: SecurityClientOptions) => {
       }),
 
     refresh: (payload: { refreshToken: string }) =>
-      request<AuthResponse>("/auth/refresh", {
+      request<AuthResponse>("/security/auth/refresh", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
@@ -85,18 +88,36 @@ export const createSecurityClient = (options: SecurityClientOptions) => {
       }),
 
     logout: (payload: { refreshToken?: string }) =>
-      request<{ success: true }>("/auth/logout", {
+      request<{ success: true }>("/security/auth/logout", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
 
-    requestEmailVerification: () =>
-      request<DebugTokenResponse>("/auth/request-email-verification", {
+    changePassword: (payload: {
+      currentPassword: string;
+      newPassword: string;
+    }) =>
+      request<GenericSuccessResponse>("/security/auth/change-password", {
         method: "POST",
+        body: JSON.stringify(payload),
       }),
 
     verifyEmail: (token: string) =>
-      request<{ success: true }>(`/auth/verify-email?token=${token}`),
+      request<{ success: true }>(
+        `/security/auth/verify-email?token=${encodeURIComponent(token)}`,
+      ),
+
+    forgotPassword: (email: string) =>
+      request<GenericSuccessResponse>("/security/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+
+    resetPassword: (payload: { token: string; newPassword: string }) =>
+      request<GenericSuccessResponse>("/security/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
 
     requestPhoneVerification: () =>
       request<DebugCodeResponse>("/auth/request-phone-verification", {
@@ -109,23 +130,63 @@ export const createSecurityClient = (options: SecurityClientOptions) => {
         body: JSON.stringify({ code }),
       }),
 
-    getMyRoles: () => request<UserRolesResponse>("/auth/me/roles"),
+    getMyRoles: () => request<UserRolesResponse>("/security/auth/me/roles"),
 
-    listRoles: () => request<RoleCatalogResponse>("/admin/roles"),
+    listRoles: () => request<RoleCatalogResponse>("/security/workflows/roles"),
 
     createRole: (payload: { role: string; description?: string | null }) =>
-      request<RoleCatalogResponse>("/admin/roles", {
+      request<RoleCatalogResponse>("/security/workflows/roles", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
 
     getUserRoles: (userId: string) =>
-      request<UserRolesResponse>(`/admin/users/${userId}/roles`),
+      request<UserRolesResponse>(`/security/workflows/users/${userId}/roles`),
 
     setUserRoles: (userId: string, roles: string[]) =>
-      request<UserRolesResponse>(`/admin/users/${userId}/roles`, {
+      request<UserRolesResponse>(`/security/workflows/users/${userId}/roles`, {
         method: "PUT",
         body: JSON.stringify({ roles }),
       }),
+
+    approveUser: (userId: string, approved: boolean) =>
+      request<AdminNotificationResponse>(
+        `/security/workflows/users/${userId}/admin-approval`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ approved }),
+        },
+      ),
+
+    setUserActive: (userId: string, active: boolean) =>
+      request<UserActiveResponse>(
+        `/security/workflows/users/${userId}/active`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ active }),
+        },
+      ),
+
+    removeRole: (role: string) =>
+      request<{ success: boolean }>(
+        `/security/workflows/roles/${encodeURIComponent(role)}`,
+        {
+          method: "DELETE",
+        },
+      ),
+
+    assignRoleToUser: (userId: string, role: string) =>
+      request<UserRolesResponse>(`/security/workflows/users/${userId}/roles`, {
+        method: "POST",
+        body: JSON.stringify({ role }),
+      }),
+
+    removeRoleFromUser: (userId: string, role: string) =>
+      request<UserRolesResponse>(
+        `/security/workflows/users/${userId}/roles/${encodeURIComponent(role)}`,
+        {
+          method: "DELETE",
+        },
+      ),
   };
 };
