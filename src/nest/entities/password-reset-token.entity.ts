@@ -1,16 +1,18 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
 } from "typeorm";
+import { v7 as uuidv7 } from "uuid";
 
 @Entity({ name: "security_password_reset_token" })
 export class PasswordResetTokenEntity {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryColumn({ type: "uuid" })
   id!: string;
 
-  @Column({ type: "varchar", name: "user_id" })
+  @Column({ type: "uuid", name: "user_id" })
   userId!: string;
 
   @Column({ type: "varchar", unique: true })
@@ -24,4 +26,11 @@ export class PasswordResetTokenEntity {
 
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
+
+  @BeforeInsert()
+  ensureId() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 }

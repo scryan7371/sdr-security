@@ -8,12 +8,14 @@ export class AddRefreshTokens1700000000001 {
 
     await queryRunner.query(`
       CREATE TABLE "refresh_token" (
-        "id" varchar PRIMARY KEY NOT NULL,
+        "id" uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
         "token_hash" varchar NOT NULL,
         "expires_at" timestamptz NOT NULL,
         "revoked_at" timestamptz,
-        "userId" varchar,
+        "userId" uuid,
         "created_at" timestamptz NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+        CONSTRAINT "CHK_refresh_token_id_uuidv7" CHECK ("id"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
+        CONSTRAINT "CHK_refresh_token_userId_uuidv7" CHECK ("userId" IS NULL OR "userId"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
         CONSTRAINT "FK_refresh_token_user" FOREIGN KEY ("userId") REFERENCES ${userTableRef} ("id") ON DELETE CASCADE ON UPDATE NO ACTION
       )
     `);

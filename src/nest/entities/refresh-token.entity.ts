@@ -2,7 +2,7 @@ import { Column, CreateDateColumn, Entity, PrimaryColumn } from "typeorm";
 
 @Entity({ name: "refresh_token" })
 export class RefreshTokenEntity {
-  @PrimaryColumn({ type: "varchar" })
+  @PrimaryColumn({ type: "uuid" })
   id!: string;
 
   @Column({ type: "varchar", name: "token_hash" })
@@ -14,7 +14,7 @@ export class RefreshTokenEntity {
   @Column({ type: "timestamptz", name: "revoked_at", nullable: true })
   revokedAt!: Date | null;
 
-  @Column({ type: "varchar", name: "userId", nullable: true })
+  @Column({ type: "uuid", name: "userId", nullable: true })
   userId!: string | null;
 
   @CreateDateColumn({ name: "created_at" })

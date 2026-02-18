@@ -121,7 +121,7 @@ describe("database integration", () => {
     await client.query(`SET search_path TO "${schema}", public`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS "${schema}"."app_user" (
-        "id" varchar PRIMARY KEY NOT NULL,
+        "id" uuid PRIMARY KEY NOT NULL,
         "email" varchar NOT NULL
       )
     `);

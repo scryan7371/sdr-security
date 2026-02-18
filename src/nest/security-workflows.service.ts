@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
+import { v7 as uuidv7 } from "uuid";
 import { ADMIN_ROLE } from "../api/contracts";
 import { normalizeRoleName } from "../api/roles";
 import { AppUserEntity } from "./entities/app-user.entity";
@@ -106,6 +107,7 @@ export class SecurityWorkflowsService {
     let role = await this.rolesRepo.findOne({ where: { roleKey } });
     if (!role) {
       role = this.rolesRepo.create({
+        id: uuidv7(),
         roleKey,
         description: description?.trim() || null,
         isSystem: roleKey === ADMIN_ROLE,
@@ -158,6 +160,7 @@ export class SecurityWorkflowsService {
       await this.userRolesRepo.save(
         roles.map((role) =>
           this.userRolesRepo.create({
+            id: uuidv7(),
             userId,
             roleId: role.id,
           }),
@@ -210,6 +213,7 @@ export class SecurityWorkflowsService {
     await this.rolesRepo.save(
       missing.map((roleKey) =>
         this.rolesRepo.create({
+          id: uuidv7(),
           roleKey,
           description: null,
           isSystem: roleKey === ADMIN_ROLE,

@@ -8,13 +8,14 @@ export class CreateSecurityUser1739530000000 {
 
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "security_user" (
-        "user_id" varchar PRIMARY KEY NOT NULL,
+        "user_id" uuid PRIMARY KEY NOT NULL,
         "password_hash" varchar NOT NULL,
         "email_verified_at" timestamptz,
         "email_verification_token" varchar,
         "admin_approved_at" timestamptz,
         "is_active" boolean NOT NULL DEFAULT true,
         "created_at" timestamptz NOT NULL DEFAULT now(),
+        CONSTRAINT "CHK_security_user_user_id_uuidv7" CHECK ("user_id"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
         CONSTRAINT "FK_security_user_user_id" FOREIGN KEY ("user_id") REFERENCES ${userTableRef} ("id") ON DELETE CASCADE
       )
     `);

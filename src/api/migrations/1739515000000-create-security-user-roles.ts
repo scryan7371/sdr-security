@@ -9,9 +9,12 @@ export class CreateSecurityUserRoles1739515000000 {
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "security_user_role" (
         "id" uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
-        "user_id" varchar NOT NULL,
+        "user_id" uuid NOT NULL,
         "role_id" uuid NOT NULL,
         "created_at" timestamptz NOT NULL DEFAULT now(),
+        CONSTRAINT "CHK_security_user_role_id_uuidv7" CHECK ("id"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
+        CONSTRAINT "CHK_security_user_role_user_id_uuidv7" CHECK ("user_id"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
+        CONSTRAINT "CHK_security_user_role_role_id_uuidv7" CHECK ("role_id"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
         CONSTRAINT "FK_security_user_role_user_id" FOREIGN KEY ("user_id") REFERENCES ${userTableRef} ("id") ON DELETE CASCADE,
         CONSTRAINT "FK_security_user_role_role_id" FOREIGN KEY ("role_id") REFERENCES "security_role" ("id") ON DELETE CASCADE
       )

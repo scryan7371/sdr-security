@@ -10,11 +10,14 @@ vi.mock("bcryptjs", () => ({
 
 vi.mock("crypto", () => ({
   randomBytes: vi.fn(() => ({ toString: () => "token-bytes" })),
-  randomUUID: vi.fn(() => "uuid-1"),
 }));
 
 vi.mock("jsonwebtoken", () => ({
   sign: vi.fn(() => "signed-access-token"),
+}));
+
+vi.mock("uuid", () => ({
+  v7: vi.fn(() => "uuid-1"),
 }));
 
 import { compare } from "bcryptjs";

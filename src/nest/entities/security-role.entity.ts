@@ -1,8 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { v7 as uuidv7 } from "uuid";
+import { BeforeInsert, Column, Entity, PrimaryColumn } from "typeorm";
 
 @Entity({ name: "security_role" })
 export class SecurityRoleEntity {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryColumn({ type: "uuid" })
   id!: string;
 
   @Column({ type: "varchar", name: "role_key", unique: true })
@@ -13,4 +14,11 @@ export class SecurityRoleEntity {
 
   @Column({ type: "boolean", name: "is_system", default: false })
   isSystem!: boolean;
+
+  @BeforeInsert()
+  ensureId() {
+    if (!this.id) {
+      this.id = uuidv7();
+    }
+  }
 }

@@ -4,9 +4,10 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
-import { randomBytes, randomUUID } from "crypto";
+import { randomBytes } from "crypto";
 import { compare, hash } from "bcryptjs";
 import { sign, type SignOptions } from "jsonwebtoken";
+import { v7 as uuidv7 } from "uuid";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, IsNull, Repository } from "typeorm";
 import { AuthResponse, RegisterResponse } from "../api/contracts";
@@ -60,6 +61,7 @@ export class SecurityAuthService {
 
     const appUser = await this.appUsersRepo.save(
       this.appUsersRepo.create({
+        id: uuidv7(),
         email,
       }),
     );
@@ -195,6 +197,7 @@ export class SecurityAuthService {
     );
     await this.passwordResetRepo.save(
       this.passwordResetRepo.create({
+        id: uuidv7(),
         userId: appUser.id,
         token,
         expiresAt,
@@ -283,7 +286,7 @@ export class SecurityAuthService {
 
     await this.refreshTokenRepo.save(
       this.refreshTokenRepo.create({
-        id: randomUUID(),
+        id: uuidv7(),
         userId: appUser.id,
         tokenHash: refreshTokenHash,
         expiresAt: refreshTokenExpiresAt,

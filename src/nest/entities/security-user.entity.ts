@@ -2,7 +2,7 @@ import { Column, CreateDateColumn, Entity, PrimaryColumn } from "typeorm";
 
 @Entity({ name: "security_user" })
 export class SecurityUserEntity {
-  @PrimaryColumn({ type: "varchar", name: "user_id" })
+  @PrimaryColumn({ type: "uuid", name: "user_id" })
   userId!: string;
 
   @Column({ type: "varchar", name: "password_hash" })
