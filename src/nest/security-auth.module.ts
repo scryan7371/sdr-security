@@ -5,6 +5,7 @@ import { AppUserEntity } from "./entities/app-user.entity";
 import { PasswordResetTokenEntity } from "./entities/password-reset-token.entity";
 import { RefreshTokenEntity } from "./entities/refresh-token.entity";
 import { SecurityRoleEntity } from "./entities/security-role.entity";
+import { SecurityUserEntity } from "./entities/security-user.entity";
 import { SecurityUserRoleEntity } from "./entities/security-user-role.entity";
 import { SecurityAdminGuard } from "./security-admin.guard";
 import { SecurityAuthController } from "./security-auth.controller";
@@ -39,6 +40,7 @@ export class SecurityAuthModule {
       imports: [
         TypeOrmModule.forFeature([
           AppUserEntity,
+          SecurityUserEntity,
           RefreshTokenEntity,
           PasswordResetTokenEntity,
           SecurityRoleEntity,

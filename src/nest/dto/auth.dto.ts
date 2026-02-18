@@ -6,12 +6,6 @@ export class RegisterDto {
 
   @ApiProperty({ example: "StrongPass1" })
   password!: string;
-
-  @ApiProperty({ required: false, nullable: true, example: "John" })
-  firstName?: string | null;
-
-  @ApiProperty({ required: false, nullable: true, example: "Doe" })
-  lastName?: string | null;
 }
 
 export class LoginDto {

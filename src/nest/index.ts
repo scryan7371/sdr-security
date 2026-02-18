@@ -15,4 +15,5 @@ export * from "./entities/app-user.entity";
 export * from "./entities/refresh-token.entity";
 export * from "./entities/password-reset-token.entity";
 export * from "./entities/security-role.entity";
+export * from "./entities/security-user.entity";
 export * from "./entities/security-user-role.entity";

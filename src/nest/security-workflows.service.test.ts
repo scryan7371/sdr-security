@@ -20,25 +20,32 @@ const makeNotifier = () => ({
 const makeUser = () => ({
   id: "user-1",
   email: "user@example.com",
-  firstName: "A",
-  lastName: "B",
   isActive: true,
 });
 
 const setup = () => {
-  const usersRepo = makeRepo();
+  const appUsersRepo = makeRepo();
+  const securityUsersRepo = makeRepo();
   const rolesRepo = makeRepo();
   const userRolesRepo = makeRepo();
   const notifier = makeNotifier();
 
   const service = new SecurityWorkflowsService(
-    usersRepo as never,
+    appUsersRepo as never,
+    securityUsersRepo as never,
     rolesRepo as never,
     userRolesRepo as never,
     notifier as never,
   );
 
-  return { service, usersRepo, rolesRepo, userRolesRepo, notifier };
+  return {
+    service,
+    appUsersRepo,
+    securityUsersRepo,
+    rolesRepo,
+    userRolesRepo,
+    notifier,
+  };
 };
 
 describe("SecurityWorkflowsService", () => {
@@ -47,8 +54,8 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("marks email verified and notifies admins", async () => {
-    const { service, usersRepo, userRolesRepo, notifier } = setup();
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    const { service, appUsersRepo, userRolesRepo, notifier } = setup();
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
 
     const getRawMany = vi
       .fn()
@@ -73,8 +80,8 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("returns not-notified when no admins are present", async () => {
-    const { service, usersRepo, userRolesRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    const { service, appUsersRepo, userRolesRepo } = setup();
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
 
     const qb = {
       innerJoin: vi.fn().mockReturnThis(),
@@ -91,8 +98,8 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("throws when user is missing during verification flow", async () => {
-    const { service, usersRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(null);
+    const { service, appUsersRepo } = setup();
+    appUsersRepo.findOne.mockResolvedValue(null);
 
     await expect(
       service.markEmailVerifiedAndNotifyAdmins("missing"),
@@ -100,8 +107,8 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("handles admin approval notifications", async () => {
-    const { service, usersRepo, notifier } = setup();
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    const { service, appUsersRepo, notifier } = setup();
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
 
     await expect(
       service.setAdminApprovalAndNotifyUser("user-1", false),
@@ -113,13 +120,12 @@ describe("SecurityWorkflowsService", () => {
 
     expect(notifier.sendUserAccountApproved).toHaveBeenCalledWith({
       email: "user@example.com",
-      firstName: "A",
     });
   });
 
   it("throws when approval target user is missing", async () => {
-    const { service, usersRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(null);
+    const { service, appUsersRepo } = setup();
+    appUsersRepo.findOne.mockResolvedValue(null);
 
     await expect(
       service.setAdminApprovalAndNotifyUser("missing", true),
@@ -166,8 +172,8 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("gets and sets user roles", async () => {
-    const { service, usersRepo, userRolesRepo, rolesRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    const { service, appUsersRepo, userRolesRepo, rolesRepo } = setup();
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
     userRolesRepo.find.mockResolvedValue([{ roleId: "r1" }]);
     rolesRepo.find.mockResolvedValue([{ id: "r1", roleKey: "ADMIN" }]);
 
@@ -189,8 +195,8 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("assigns and removes role from user", async () => {
-    const { service, usersRepo, userRolesRepo, rolesRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    const { service, appUsersRepo, userRolesRepo, rolesRepo } = setup();
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
 
     userRolesRepo.find.mockResolvedValue([]);
     rolesRepo.find.mockResolvedValue([]);
@@ -206,21 +212,21 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("sets user active state", async () => {
-    const { service, usersRepo } = setup();
+    const { service, securityUsersRepo } = setup();
     await expect(service.setUserActive("user-1", false)).resolves.toEqual({
       success: true,
       userId: "user-1",
       active: false,
     });
-    expect(usersRepo.update).toHaveBeenCalledWith(
-      { id: "user-1" },
+    expect(securityUsersRepo.update).toHaveBeenCalledWith(
+      { userId: "user-1" },
       { isActive: false },
     );
   });
 
   it("throws when role operations target missing user", async () => {
-    const { service, usersRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(null);
+    const { service, appUsersRepo } = setup();
+    appUsersRepo.findOne.mockResolvedValue(null);
 
     await expect(service.getUserRoles("missing")).rejects.toBeInstanceOf(
       NotFoundException,

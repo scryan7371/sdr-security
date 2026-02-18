@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AddRefreshTokens1700000000001 } from "./1700000000001-add-refresh-tokens";
-import { AddGoogleSubjectToUser1739490000000 } from "./1739490000000-add-google-subject-to-user";
 import { CreateSecurityIdentity1739500000000 } from "./1739500000000-create-security-identity";
 import { CreateSecurityRoles1739510000000 } from "./1739510000000-create-security-roles";
+import { CreateSecurityUserRoles1739515000000 } from "./1739515000000-create-security-user-roles";
 import { CreatePasswordResetTokens1739520000000 } from "./1739520000000-create-password-reset-tokens";
+import { CreateSecurityUser1739530000000 } from "./1739530000000-create-security-user";
 import { securityMigrations } from "./index";
 
 const originalEnv = { ...process.env };
@@ -15,11 +16,18 @@ afterEach(() => {
 
 describe("security migrations", () => {
   it("exports migration list", () => {
-    expect(securityMigrations.length).toBe(5);
-    expect(securityMigrations[0]).toBe(AddRefreshTokens1700000000001);
+    expect(securityMigrations.length).toBe(6);
+    expect(securityMigrations).toEqual([
+      AddRefreshTokens1700000000001,
+      CreateSecurityIdentity1739500000000,
+      CreateSecurityRoles1739510000000,
+      CreateSecurityUserRoles1739515000000,
+      CreatePasswordResetTokens1739520000000,
+      CreateSecurityUser1739530000000,
+    ]);
   });
 
-  it("runs add refresh tokens migration up/down", async () => {
+  it("runs refresh token migration up/down", async () => {
     const query = vi.fn().mockResolvedValue(undefined);
     const migration = new AddRefreshTokens1700000000001();
 
@@ -34,46 +42,10 @@ describe("security migrations", () => {
     );
   });
 
-  it("uses schema/table env in refresh token migration", async () => {
-    process.env.USER_TABLE = "users";
-    process.env.USER_TABLE_SCHEMA = "security";
+  it("runs security identity migration up/down", async () => {
     const query = vi.fn().mockResolvedValue(undefined);
-
-    await new AddRefreshTokens1700000000001().up({ query });
-
-    expect(query).toHaveBeenCalledWith(
-      expect.stringContaining('REFERENCES "security"."users" ("id")'),
-    );
-  });
-
-  it("throws for invalid identifiers in refresh token migration", async () => {
-    process.env.USER_TABLE = "bad-name;drop";
-    const query = vi.fn().mockResolvedValue(undefined);
-
-    await expect(
-      new AddRefreshTokens1700000000001().up({ query }),
-    ).rejects.toThrow("Invalid SQL identifier");
-  });
-
-  it("keeps legacy google subject migration as no-op", async () => {
-    const migration = new AddGoogleSubjectToUser1739490000000();
-    await expect(migration.up()).resolves.toBeUndefined();
-    await expect(migration.down()).resolves.toBeUndefined();
-  });
-
-  it("runs security identity migration path with google_subject present", async () => {
-    const query = vi
-      .fn()
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce([{ "?column?": 1 }])
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined);
-
     const migration = new CreateSecurityIdentity1739500000000();
+
     await migration.up({ query });
     await migration.down({ query });
 
@@ -85,52 +57,28 @@ describe("security migrations", () => {
     );
   });
 
-  it("skips google_subject migration block when column absent", async () => {
-    const query = vi
-      .fn()
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce([]);
-
-    await new CreateSecurityIdentity1739500000000().up({ query });
-
-    expect(query).not.toHaveBeenCalledWith(
-      expect.stringContaining('DROP COLUMN IF EXISTS "google_subject"'),
-    );
-  });
-
-  it("throws for invalid identifiers in identity migration", async () => {
-    process.env.USER_TABLE_SCHEMA = "bad-schema!";
+  it("runs security role migration up/down", async () => {
     const query = vi.fn().mockResolvedValue(undefined);
-
-    await expect(
-      new CreateSecurityIdentity1739500000000().up({ query }),
-    ).rejects.toThrow("Invalid SQL identifier");
-  });
-
-  it("runs security roles migration path with legacy role column", async () => {
-    const query = vi
-      .fn()
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce([{ "?column?": 1 }])
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined);
-
     const migration = new CreateSecurityRoles1739510000000();
+
     await migration.up({ query });
     await migration.down({ query });
 
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining('CREATE TABLE IF NOT EXISTS "security_role"'),
     );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('DROP TABLE IF EXISTS "security_role"'),
+    );
+  });
+
+  it("runs security user role migration up/down", async () => {
+    const query = vi.fn().mockResolvedValue(undefined);
+    const migration = new CreateSecurityUserRoles1739515000000();
+
+    await migration.up({ query });
+    await migration.down({ query });
+
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining(
         'CREATE TABLE IF NOT EXISTS "security_user_role"',
@@ -139,33 +87,6 @@ describe("security migrations", () => {
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining('DROP TABLE IF EXISTS "security_user_role"'),
     );
-  });
-
-  it("skips legacy role backfill when role column absent", async () => {
-    const query = vi
-      .fn()
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce([]);
-
-    await new CreateSecurityRoles1739510000000().up({ query });
-
-    expect(query).not.toHaveBeenCalledWith(
-      expect.stringContaining('DROP COLUMN IF EXISTS "role"'),
-    );
-  });
-
-  it("throws for invalid identifiers in roles migration", async () => {
-    process.env.USER_TABLE = "bad-name*";
-    const query = vi.fn().mockResolvedValue(undefined);
-
-    await expect(
-      new CreateSecurityRoles1739510000000().up({ query }),
-    ).rejects.toThrow("Invalid SQL identifier");
   });
 
   it("runs password reset token migration up/down", async () => {
@@ -187,22 +108,38 @@ describe("security migrations", () => {
     );
   });
 
-  it("uses default public schema in password reset migration", async () => {
+  it("runs security user migration up/down", async () => {
     const query = vi.fn().mockResolvedValue(undefined);
+    const migration = new CreateSecurityUser1739530000000();
 
-    await new CreatePasswordResetTokens1739520000000().up({ query });
+    await migration.up({ query });
+    await migration.down({ query });
 
     expect(query).toHaveBeenCalledWith(
-      expect.stringContaining('REFERENCES "public"."app_user" ("id")'),
+      expect.stringContaining('CREATE TABLE IF NOT EXISTS "security_user"'),
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('DROP TABLE IF EXISTS "security_user"'),
     );
   });
 
-  it("throws for invalid identifiers in password reset migration", async () => {
-    process.env.USER_TABLE_SCHEMA = "bad.schema";
+  it("uses user schema/table env safely", async () => {
+    process.env.USER_TABLE = "users";
+    process.env.USER_TABLE_SCHEMA = "security";
+    const query = vi.fn().mockResolvedValue(undefined);
+
+    await new CreateSecurityUser1739530000000().up({ query });
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('REFERENCES "security"."users" ("id")'),
+    );
+  });
+
+  it("throws for invalid identifiers", async () => {
+    process.env.USER_TABLE = "bad-name!";
     const query = vi.fn().mockResolvedValue(undefined);
 
     await expect(
-      new CreatePasswordResetTokens1739520000000().up({ query }),
+      new CreateSecurityUserRoles1739515000000().up({ query }),
     ).rejects.toThrow("Invalid SQL identifier");
   });
 });

@@ -4,8 +4,6 @@ export type UserRole = string;
 export type SafeUser = {
   id: string;
   email: string;
-  firstName: string | null;
-  lastName: string | null;
   phone: string | null;
   roles: UserRole[];
   emailVerifiedAt: string | Date | null;

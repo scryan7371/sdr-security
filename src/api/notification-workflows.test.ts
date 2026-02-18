@@ -15,8 +15,6 @@ describe("notification-workflows", () => {
       user: {
         id: "user-1",
         email: "user@example.com",
-        firstName: "User",
-        lastName: "One",
       },
       listAdminEmails,
       notifyAdmins,
@@ -55,14 +53,13 @@ describe("notification-workflows", () => {
 
     const result = await notifyUserOnAdminApproval({
       approved: true,
-      user: { email: "user@example.com", firstName: "User" },
+      user: { email: "user@example.com" },
       notifyUser,
     });
 
     expect(result).toEqual({ notified: true });
     expect(notifyUser).toHaveBeenCalledWith({
       email: "user@example.com",
-      firstName: "User",
     });
   });
 

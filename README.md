@@ -41,8 +41,8 @@ import { EmailService } from "./notifications/email.service";
               adminEmails,
               user,
             ),
-          sendUserAccountApproved: ({ email, firstName }) =>
-            emailService.sendAccountApproved(email, firstName),
+          sendUserAccountApproved: ({ email }) =>
+            emailService.sendAccountApproved(email),
         }),
         inject: [EmailService],
       },
@@ -96,8 +96,6 @@ await sdrSecurity.notifyAdminsOnEmailVerified({
   user: {
     id: user.id,
     email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
   },
   listAdminEmails: () => usersService.listAdminEmails(),
   notifyAdmins: ({ adminEmails, user }) =>
@@ -108,10 +106,8 @@ await sdrSecurity.notifyUserOnAdminApproval({
   approved: body.approved,
   user: {
     email: user.email,
-    firstName: user.firstName,
   },
-  notifyUser: ({ email, firstName }) =>
-    emailService.sendAccountApproved(email, firstName),
+  notifyUser: ({ email }) => emailService.sendAccountApproved(email),
 });
 ```
 

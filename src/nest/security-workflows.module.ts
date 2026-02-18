@@ -7,6 +7,7 @@ import { SecurityAdminGuard } from "./security-admin.guard";
 import { SecurityJwtGuard } from "./security-jwt.guard";
 import { AppUserEntity } from "./entities/app-user.entity";
 import { SecurityRoleEntity } from "./entities/security-role.entity";
+import { SecurityUserEntity } from "./entities/security-user.entity";
 import { SecurityUserRoleEntity } from "./entities/security-user-role.entity";
 import { SecurityWorkflowsController } from "./security-workflows.controller";
 import { SecurityWorkflowsService } from "./security-workflows.service";
@@ -33,6 +34,7 @@ export class SecurityWorkflowsModule {
       imports: [
         TypeOrmModule.forFeature([
           AppUserEntity,
+          SecurityUserEntity,
           SecurityRoleEntity,
           SecurityUserRoleEntity,
         ]),

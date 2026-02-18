@@ -1,5 +1,5 @@
-export class CreatePasswordResetTokens1739520000000 {
-  name = "CreatePasswordResetTokens1739520000000";
+export class CreateSecurityUserRoles1739515000000 {
+  name = "CreateSecurityUserRoles1739515000000";
 
   async up(queryRunner: {
     query: (sql: string) => Promise<unknown>;
@@ -7,21 +7,18 @@ export class CreatePasswordResetTokens1739520000000 {
     const userTableRef = getUserTableReference();
 
     await queryRunner.query(`
-      CREATE TABLE IF NOT EXISTS "security_password_reset_token" (
+      CREATE TABLE IF NOT EXISTS "security_user_role" (
         "id" uuid PRIMARY KEY NOT NULL DEFAULT uuidv7(),
         "user_id" varchar NOT NULL,
-        "token" varchar NOT NULL,
-        "expires_at" timestamptz NOT NULL,
-        "used_at" timestamptz,
+        "role_id" uuid NOT NULL,
         "created_at" timestamptz NOT NULL DEFAULT now(),
-        CONSTRAINT "FK_security_password_reset_token_user_id" FOREIGN KEY ("user_id") REFERENCES ${userTableRef} ("id") ON DELETE CASCADE
+        CONSTRAINT "FK_security_user_role_user_id" FOREIGN KEY ("user_id") REFERENCES ${userTableRef} ("id") ON DELETE CASCADE,
+        CONSTRAINT "FK_security_user_role_role_id" FOREIGN KEY ("role_id") REFERENCES "security_role" ("id") ON DELETE CASCADE
       )
     `);
+
     await queryRunner.query(
-      `CREATE UNIQUE INDEX IF NOT EXISTS "IDX_security_password_reset_token_token" ON "security_password_reset_token" ("token")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX IF NOT EXISTS "IDX_security_password_reset_token_user_id" ON "security_password_reset_token" ("user_id")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "IDX_security_user_role_user_role" ON "security_user_role" ("user_id", "role_id")`,
     );
   }
 
@@ -29,14 +26,9 @@ export class CreatePasswordResetTokens1739520000000 {
     query: (sql: string) => Promise<unknown>;
   }): Promise<void> {
     await queryRunner.query(
-      `DROP INDEX IF EXISTS "IDX_security_password_reset_token_user_id"`,
+      `DROP INDEX IF EXISTS "IDX_security_user_role_user_role"`,
     );
-    await queryRunner.query(
-      `DROP INDEX IF EXISTS "IDX_security_password_reset_token_token"`,
-    );
-    await queryRunner.query(
-      `DROP TABLE IF EXISTS "security_password_reset_token"`,
-    );
+    await queryRunner.query(`DROP TABLE IF EXISTS "security_user_role"`);
   }
 }
 

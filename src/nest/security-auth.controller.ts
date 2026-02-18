@@ -44,8 +44,6 @@ export class SecurityAuthController {
     body: {
       email?: string;
       password?: string;
-      firstName?: string;
-      lastName?: string;
     },
   ) {
     if (!body.email || !body.password) {
@@ -54,8 +52,6 @@ export class SecurityAuthController {
     return this.authService.register({
       email: body.email,
       password: body.password,
-      firstName: body.firstName ?? null,
-      lastName: body.lastName ?? null,
     });
   }
 

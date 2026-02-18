@@ -5,6 +5,7 @@ import { ADMIN_ROLE } from "../api/contracts";
 import { normalizeRoleName } from "../api/roles";
 import { AppUserEntity } from "./entities/app-user.entity";
 import { SecurityRoleEntity } from "./entities/security-role.entity";
+import { SecurityUserEntity } from "./entities/security-user.entity";
 import { SecurityUserRoleEntity } from "./entities/security-user-role.entity";
 import { SecurityWorkflowNotifier } from "./contracts";
 import { SECURITY_WORKFLOW_NOTIFIER } from "./tokens";
@@ -13,7 +14,9 @@ import { SECURITY_WORKFLOW_NOTIFIER } from "./tokens";
 export class SecurityWorkflowsService {
   constructor(
     @InjectRepository(AppUserEntity)
-    private readonly usersRepo: Repository<AppUserEntity>,
+    private readonly appUsersRepo: Repository<AppUserEntity>,
+    @InjectRepository(SecurityUserEntity)
+    private readonly securityUsersRepo: Repository<SecurityUserEntity>,
     @InjectRepository(SecurityRoleEntity)
     private readonly rolesRepo: Repository<SecurityRoleEntity>,
     @InjectRepository(SecurityUserRoleEntity)
@@ -23,12 +26,12 @@ export class SecurityWorkflowsService {
   ) {}
 
   async markEmailVerifiedAndNotifyAdmins(userId: string) {
-    await this.usersRepo.update(
-      { id: userId },
+    await this.securityUsersRepo.update(
+      { userId },
       { emailVerifiedAt: new Date(), emailVerificationToken: null },
     );
 
-    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    const user = await this.appUsersRepo.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException("User not found");
     }
@@ -43,8 +46,6 @@ export class SecurityWorkflowsService {
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
       },
     });
 
@@ -52,12 +53,12 @@ export class SecurityWorkflowsService {
   }
 
   async setAdminApprovalAndNotifyUser(userId: string, approved: boolean) {
-    await this.usersRepo.update(
-      { id: userId },
+    await this.securityUsersRepo.update(
+      { userId },
       { adminApprovedAt: approved ? new Date() : null },
     );
 
-    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    const user = await this.appUsersRepo.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException("User not found");
     }
@@ -68,7 +69,6 @@ export class SecurityWorkflowsService {
 
     await this.notifier.sendUserAccountApproved({
       email: user.email,
-      firstName: user.firstName,
     });
 
     return { success: true as const, notified: true as const };
@@ -79,8 +79,13 @@ export class SecurityWorkflowsService {
       .createQueryBuilder("userRole")
       .innerJoin("security_role", "role", "role.id = userRole.role_id")
       .innerJoin("app_user", "user", "user.id = userRole.user_id")
+      .innerJoin(
+        "security_user",
+        "securityUser",
+        "securityUser.user_id = userRole.user_id",
+      )
       .where("role.role_key = :roleKey", { roleKey: ADMIN_ROLE })
-      .andWhere("user.is_active = :isActive", { isActive: true })
+      .andWhere("securityUser.is_active = :isActive", { isActive: true })
       .select("DISTINCT user.email", "email")
       .getRawMany<{ email: string }>();
 
@@ -178,12 +183,12 @@ export class SecurityWorkflowsService {
   }
 
   async setUserActive(userId: string, active: boolean) {
-    await this.usersRepo.update({ id: userId }, { isActive: active });
+    await this.securityUsersRepo.update({ userId }, { isActive: active });
     return { success: true as const, userId, active };
   }
 
   private async assertUserExists(userId: string) {
-    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    const user = await this.appUsersRepo.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException("User not found");
     }

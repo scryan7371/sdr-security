@@ -1,8 +1,6 @@
 export type VerificationNotificationUser = {
   id: string;
   email: string;
-  firstName?: string | null;
-  lastName?: string | null;
 };
 
 export const notifyAdminsOnEmailVerified = async (params: {
@@ -26,12 +24,8 @@ export const notifyUserOnAdminApproval = async (params: {
   approved: boolean;
   user: {
     email: string;
-    firstName?: string | null;
   };
-  notifyUser: (payload: {
-    email: string;
-    firstName?: string | null;
-  }) => Promise<void>;
+  notifyUser: (payload: { email: string }) => Promise<void>;
 }) => {
   if (!params.approved) {
     return { notified: false as const };
@@ -39,7 +33,6 @@ export const notifyUserOnAdminApproval = async (params: {
 
   await params.notifyUser({
     email: params.user.email,
-    firstName: params.user.firstName,
   });
   return { notified: true as const };
 };

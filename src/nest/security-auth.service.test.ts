@@ -39,9 +39,11 @@ const makeNotifier = () => ({
 const makeUser = () => ({
   id: "user-1",
   email: "user@example.com",
+});
+
+const makeSecurityUser = () => ({
+  userId: "user-1",
   passwordHash: "hashed:Secret123",
-  firstName: "A",
-  lastName: "B",
   emailVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
   emailVerificationToken: null,
   adminApprovedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -49,7 +51,8 @@ const makeUser = () => ({
 });
 
 const setup = () => {
-  const usersRepo = makeRepo();
+  const appUsersRepo = makeRepo();
+  const securityUsersRepo = makeRepo();
   const refreshTokenRepo = makeRepo();
   const passwordResetRepo = makeRepo();
   const rolesRepo = makeRepo();
@@ -57,7 +60,8 @@ const setup = () => {
   const notifier = makeNotifier();
 
   const service = new SecurityAuthService(
-    usersRepo as never,
+    appUsersRepo as never,
+    securityUsersRepo as never,
     refreshTokenRepo as never,
     passwordResetRepo as never,
     rolesRepo as never,
@@ -75,7 +79,8 @@ const setup = () => {
 
   return {
     service,
-    usersRepo,
+    appUsersRepo,
+    securityUsersRepo,
     refreshTokenRepo,
     passwordResetRepo,
     rolesRepo,
@@ -90,29 +95,35 @@ describe("SecurityAuthService", () => {
   });
 
   it("registers user and sends verification", async () => {
-    const { service, usersRepo, userRolesRepo, rolesRepo, notifier } = setup();
-    usersRepo.findOne.mockResolvedValue(null);
-    usersRepo.save.mockResolvedValue(makeUser());
+    const {
+      service,
+      appUsersRepo,
+      securityUsersRepo,
+      userRolesRepo,
+      rolesRepo,
+      notifier,
+    } = setup();
+    appUsersRepo.findOne.mockResolvedValue(null);
+    appUsersRepo.save.mockResolvedValue(makeUser());
+    securityUsersRepo.save.mockResolvedValue(makeSecurityUser());
     userRolesRepo.find.mockResolvedValue([]);
     rolesRepo.find.mockResolvedValue([]);
 
     const result = await service.register({
       email: "USER@example.com",
       password: "Secret123",
-      firstName: "A",
-      lastName: "B",
     });
 
     expect(result.success).toBe(true);
-    expect(usersRepo.create).toHaveBeenCalledWith(
+    expect(appUsersRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({ email: "user@example.com" }),
     );
     expect(notifier.sendEmailVerification).toHaveBeenCalled();
   });
 
   it("rejects duplicate email on register", async () => {
-    const { service, usersRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    const { service, appUsersRepo } = setup();
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
 
     await expect(
       service.register({ email: "user@example.com", password: "Secret123" }),
@@ -120,11 +131,18 @@ describe("SecurityAuthService", () => {
   });
 
   it("handles login success and auth failures", async () => {
-    const { service, usersRepo, userRolesRepo, rolesRepo, refreshTokenRepo } =
-      setup();
+    const {
+      service,
+      appUsersRepo,
+      securityUsersRepo,
+      userRolesRepo,
+      rolesRepo,
+      refreshTokenRepo,
+    } = setup();
     const user = makeUser();
 
-    usersRepo.findOne.mockResolvedValue(user);
+    appUsersRepo.findOne.mockResolvedValue(user);
+    securityUsersRepo.findOne.mockResolvedValue(makeSecurityUser());
     userRolesRepo.find.mockResolvedValue([{ roleId: "r1" }]);
     rolesRepo.find.mockResolvedValue([{ id: "r1", roleKey: "admin" }]);
 
@@ -136,30 +154,31 @@ describe("SecurityAuthService", () => {
     expect(sign).toHaveBeenCalled();
     expect(refreshTokenRepo.save).toHaveBeenCalled();
 
-    usersRepo.findOne.mockResolvedValue(null);
+    appUsersRepo.findOne.mockResolvedValue(null);
     await expect(
       service.login({ email: "none@example.com", password: "Secret123" }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it("blocks login when account is inactive or missing approvals", async () => {
-    const { service, usersRepo } = setup();
-    const inactive = { ...makeUser(), isActive: false };
-    usersRepo.findOne.mockResolvedValue(inactive);
+    const { service, appUsersRepo, securityUsersRepo } = setup();
+    const inactive = { ...makeSecurityUser(), isActive: false };
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
+    securityUsersRepo.findOne.mockResolvedValue(inactive);
     await expect(
-      service.login({ email: inactive.email, password: "Secret123" }),
+      service.login({ email: "x@example.com", password: "Secret123" }),
     ).rejects.toThrow("Account is inactive");
 
-    usersRepo.findOne.mockResolvedValue({
-      ...makeUser(),
+    securityUsersRepo.findOne.mockResolvedValue({
+      ...makeSecurityUser(),
       emailVerifiedAt: null,
     });
     await expect(
       service.login({ email: "x@example.com", password: "Secret123" }),
     ).rejects.toThrow("Email verification required");
 
-    usersRepo.findOne.mockResolvedValue({
-      ...makeUser(),
+    securityUsersRepo.findOne.mockResolvedValue({
+      ...makeSecurityUser(),
       adminApprovedAt: null,
     });
     await expect(
@@ -168,8 +187,14 @@ describe("SecurityAuthService", () => {
   });
 
   it("refreshes and revokes tokens", async () => {
-    const { service, usersRepo, refreshTokenRepo, userRolesRepo, rolesRepo } =
-      setup();
+    const {
+      service,
+      appUsersRepo,
+      securityUsersRepo,
+      refreshTokenRepo,
+      userRolesRepo,
+      rolesRepo,
+    } = setup();
     refreshTokenRepo.find.mockResolvedValue([
       {
         id: "rt1",
@@ -178,7 +203,8 @@ describe("SecurityAuthService", () => {
         expiresAt: new Date(Date.now() + 60_000),
       },
     ]);
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
+    securityUsersRepo.findOne.mockResolvedValue(makeSecurityUser());
     userRolesRepo.find.mockResolvedValue([]);
     rolesRepo.find.mockResolvedValue([]);
 
@@ -196,7 +222,7 @@ describe("SecurityAuthService", () => {
   });
 
   it("rejects invalid refresh token and missing refresh user", async () => {
-    const { service, refreshTokenRepo, usersRepo } = setup();
+    const { service, refreshTokenRepo, appUsersRepo } = setup();
     refreshTokenRepo.find.mockResolvedValue([]);
 
     await expect(service.refresh("bad-token")).rejects.toThrow(
@@ -211,7 +237,7 @@ describe("SecurityAuthService", () => {
         expiresAt: new Date(Date.now() + 60_000),
       },
     ]);
-    usersRepo.findOne.mockResolvedValue(null);
+    appUsersRepo.findOne.mockResolvedValue(null);
 
     await expect(service.refresh("token-bytes")).rejects.toThrow(
       "User not found",
@@ -219,8 +245,8 @@ describe("SecurityAuthService", () => {
   });
 
   it("changes password", async () => {
-    const { service, usersRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    const { service, securityUsersRepo } = setup();
+    securityUsersRepo.findOne.mockResolvedValue(makeSecurityUser());
 
     await expect(
       service.changePassword({
@@ -230,7 +256,7 @@ describe("SecurityAuthService", () => {
       }),
     ).resolves.toEqual({ success: true });
 
-    usersRepo.findOne.mockResolvedValue(null);
+    securityUsersRepo.findOne.mockResolvedValue(null);
     await expect(
       service.changePassword({
         userId: "missing",
@@ -241,8 +267,15 @@ describe("SecurityAuthService", () => {
   });
 
   it("handles forgot/reset password flow", async () => {
-    const { service, usersRepo, passwordResetRepo, notifier } = setup();
-    usersRepo.findOne.mockResolvedValue(makeUser());
+    const {
+      service,
+      appUsersRepo,
+      securityUsersRepo,
+      passwordResetRepo,
+      notifier,
+    } = setup();
+    appUsersRepo.findOne.mockResolvedValue(makeUser());
+    securityUsersRepo.findOne.mockResolvedValue(makeSecurityUser());
     passwordResetRepo.findOne.mockResolvedValue({
       id: "pr1",
       userId: "user-1",
@@ -267,8 +300,8 @@ describe("SecurityAuthService", () => {
   });
 
   it("returns success for unknown forgot email and rejects bad reset token", async () => {
-    const { service, usersRepo, passwordResetRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(null);
+    const { service, appUsersRepo, passwordResetRepo } = setup();
+    appUsersRepo.findOne.mockResolvedValue(null);
     await expect(
       service.requestForgotPassword("none@example.com"),
     ).resolves.toEqual({
@@ -293,10 +326,8 @@ describe("SecurityAuthService", () => {
   });
 
   it("verifies email token and reads user roles", async () => {
-    const { service, usersRepo, userRolesRepo, rolesRepo } = setup();
-    usersRepo.findOne
-      .mockResolvedValueOnce(makeUser())
-      .mockResolvedValueOnce(makeUser());
+    const { service, securityUsersRepo, userRolesRepo, rolesRepo } = setup();
+    securityUsersRepo.findOne.mockResolvedValue(makeSecurityUser());
     userRolesRepo.find.mockResolvedValue([{ roleId: "r1" }]);
     rolesRepo.find.mockResolvedValue([{ id: "r1", roleKey: "coach" }]);
 
@@ -310,8 +341,8 @@ describe("SecurityAuthService", () => {
   });
 
   it("rejects invalid email verification token", async () => {
-    const { service, usersRepo } = setup();
-    usersRepo.findOne.mockResolvedValue(null);
+    const { service, securityUsersRepo } = setup();
+    securityUsersRepo.findOne.mockResolvedValue(null);
 
     await expect(service.verifyEmailByToken("missing")).rejects.toThrow(
       "Invalid verification token",

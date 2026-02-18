@@ -30,8 +30,6 @@ describe("createSecurityClient", () => {
     await client.register({
       email: "user@example.com",
       password: "Secret123",
-      firstName: "A",
-      lastName: "B",
     });
 
     expect(fetchImpl).toHaveBeenCalledWith(

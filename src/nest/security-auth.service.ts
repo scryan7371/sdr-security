@@ -18,6 +18,7 @@ import { AppUserEntity } from "./entities/app-user.entity";
 import { PasswordResetTokenEntity } from "./entities/password-reset-token.entity";
 import { RefreshTokenEntity } from "./entities/refresh-token.entity";
 import { SecurityRoleEntity } from "./entities/security-role.entity";
+import { SecurityUserEntity } from "./entities/security-user.entity";
 import { SecurityUserRoleEntity } from "./entities/security-user-role.entity";
 import { SECURITY_WORKFLOW_NOTIFIER } from "./tokens";
 import { SecurityWorkflowNotifier } from "./contracts";
@@ -30,7 +31,9 @@ const PASSWORD_ROUNDS = 12;
 export class SecurityAuthService {
   constructor(
     @InjectRepository(AppUserEntity)
-    private readonly usersRepo: Repository<AppUserEntity>,
+    private readonly appUsersRepo: Repository<AppUserEntity>,
+    @InjectRepository(SecurityUserEntity)
+    private readonly securityUsersRepo: Repository<SecurityUserEntity>,
     @InjectRepository(RefreshTokenEntity)
     private readonly refreshTokenRepo: Repository<RefreshTokenEntity>,
     @InjectRepository(PasswordResetTokenEntity)
@@ -48,21 +51,22 @@ export class SecurityAuthService {
   async register(params: {
     email: string;
     password: string;
-    firstName?: string | null;
-    lastName?: string | null;
   }): Promise<RegisterResponse> {
     const email = sanitizeEmail(params.email);
-    const existing = await this.usersRepo.findOne({ where: { email } });
+    const existing = await this.appUsersRepo.findOne({ where: { email } });
     if (existing) {
       throw new BadRequestException("Email already in use");
     }
 
-    const user = await this.usersRepo.save(
-      this.usersRepo.create({
+    const appUser = await this.appUsersRepo.save(
+      this.appUsersRepo.create({
         email,
+      }),
+    );
+    const securityUser = await this.securityUsersRepo.save(
+      this.securityUsersRepo.create({
+        userId: appUser.id,
         passwordHash: await hash(params.password, PASSWORD_ROUNDS),
-        firstName: params.firstName ?? null,
-        lastName: params.lastName ?? null,
         emailVerifiedAt: null,
         emailVerificationToken: null,
         adminApprovedAt: null,
@@ -70,17 +74,19 @@ export class SecurityAuthService {
       }),
     );
 
-    const verificationToken = await this.createEmailVerificationToken(user.id);
+    const verificationToken = await this.createEmailVerificationToken(
+      appUser.id,
+    );
     if (this.notifier.sendEmailVerification) {
       await this.notifier.sendEmailVerification({
-        email: user.email,
+        email: appUser.email,
         token: verificationToken,
       });
     }
 
     return {
       success: true,
-      user: await this.toSafeUser(user),
+      user: await this.toSafeUser(appUser, securityUser),
       debugToken: verificationToken,
     };
   }
@@ -90,17 +96,23 @@ export class SecurityAuthService {
     password: string;
   }): Promise<AuthResponse> {
     const email = sanitizeEmail(params.email);
-    const user = await this.usersRepo.findOne({ where: { email } });
-    if (!user) {
+    const appUser = await this.appUsersRepo.findOne({ where: { email } });
+    if (!appUser) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+    const securityUser = await this.securityUsersRepo.findOne({
+      where: { userId: appUser.id },
+    });
+    if (!securityUser) {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    const ok = await compare(params.password, user.passwordHash);
+    const ok = await compare(params.password, securityUser.passwordHash);
     if (!ok) {
       throw new UnauthorizedException("Invalid credentials");
     }
-    this.assertCanAuthenticate(user);
-    return this.issueTokens(user);
+    this.assertCanAuthenticate(securityUser);
+    return this.issueTokens(appUser, securityUser);
   }
 
   async refresh(refreshToken: string): Promise<AuthResponse> {
@@ -112,14 +124,20 @@ export class SecurityAuthService {
       { id: record.id },
       { revokedAt: new Date() },
     );
-    const user = await this.usersRepo.findOne({
+    const appUser = await this.appUsersRepo.findOne({
       where: { id: record.userId ?? "" },
     });
-    if (!user) {
+    if (!appUser) {
       throw new UnauthorizedException("User not found");
     }
-    this.assertCanAuthenticate(user);
-    return this.issueTokens(user);
+    const securityUser = await this.securityUsersRepo.findOne({
+      where: { userId: appUser.id },
+    });
+    if (!securityUser) {
+      throw new UnauthorizedException("User not found");
+    }
+    this.assertCanAuthenticate(securityUser);
+    return this.issueTokens(appUser, securityUser);
   }
 
   async logout(refreshToken?: string) {
@@ -141,16 +159,18 @@ export class SecurityAuthService {
     currentPassword: string;
     newPassword: string;
   }) {
-    const user = await this.usersRepo.findOne({ where: { id: params.userId } });
-    if (!user) {
+    const securityUser = await this.securityUsersRepo.findOne({
+      where: { userId: params.userId },
+    });
+    if (!securityUser) {
       throw new BadRequestException("User not found");
     }
-    const ok = await compare(params.currentPassword, user.passwordHash);
+    const ok = await compare(params.currentPassword, securityUser.passwordHash);
     if (!ok) {
       throw new UnauthorizedException("Current password is incorrect");
     }
-    await this.usersRepo.update(
-      { id: user.id },
+    await this.securityUsersRepo.update(
+      { userId: securityUser.userId },
       { passwordHash: await hash(params.newPassword, PASSWORD_ROUNDS) },
     );
     return { success: true as const };
@@ -158,8 +178,14 @@ export class SecurityAuthService {
 
   async requestForgotPassword(emailInput: string) {
     const email = sanitizeEmail(emailInput);
-    const user = await this.usersRepo.findOne({ where: { email } });
-    if (!user) {
+    const appUser = await this.appUsersRepo.findOne({ where: { email } });
+    if (!appUser) {
+      return { success: true as const };
+    }
+    const securityUser = await this.securityUsersRepo.findOne({
+      where: { userId: appUser.id },
+    });
+    if (!securityUser) {
       return { success: true as const };
     }
     const token = randomBytes(EMAIL_TOKEN_BYTES).toString("hex");
@@ -169,14 +195,14 @@ export class SecurityAuthService {
     );
     await this.passwordResetRepo.save(
       this.passwordResetRepo.create({
-        userId: user.id,
+        userId: appUser.id,
         token,
         expiresAt,
         usedAt: null,
       }),
     );
     if (this.notifier.sendPasswordReset) {
-      await this.notifier.sendPasswordReset({ email: user.email, token });
+      await this.notifier.sendPasswordReset({ email: appUser.email, token });
     }
     return { success: true as const };
   }
@@ -186,8 +212,8 @@ export class SecurityAuthService {
     if (!reset || reset.usedAt || reset.expiresAt.getTime() <= Date.now()) {
       throw new BadRequestException("Invalid password reset token");
     }
-    await this.usersRepo.update(
-      { id: reset.userId },
+    await this.securityUsersRepo.update(
+      { userId: reset.userId },
       { passwordHash: await hash(newPassword, PASSWORD_ROUNDS) },
     );
     await this.passwordResetRepo.update(
@@ -198,14 +224,14 @@ export class SecurityAuthService {
   }
 
   async verifyEmailByToken(token: string) {
-    const user = await this.usersRepo.findOne({
+    const user = await this.securityUsersRepo.findOne({
       where: { emailVerificationToken: token },
     });
     if (!user) {
       throw new BadRequestException("Invalid verification token");
     }
-    await this.usersRepo.update(
-      { id: user.id },
+    await this.securityUsersRepo.update(
+      { userId: user.userId },
       { emailVerifiedAt: new Date(), emailVerificationToken: null },
     );
     return { success: true as const };
@@ -215,7 +241,14 @@ export class SecurityAuthService {
     return { userId, roles: await this.getUserRoleKeys(userId) };
   }
 
-  private assertCanAuthenticate(user: AppUserEntity) {
+  async getUserIdByVerificationToken(token: string): Promise<string | null> {
+    const user = await this.securityUsersRepo.findOne({
+      where: { emailVerificationToken: token },
+    });
+    return user?.userId ?? null;
+  }
+
+  private assertCanAuthenticate(user: SecurityUserEntity) {
     if (!user.isActive) {
       throw new UnauthorizedException("Account is inactive");
     }
@@ -230,11 +263,14 @@ export class SecurityAuthService {
     }
   }
 
-  private async issueTokens(user: AppUserEntity): Promise<AuthResponse> {
-    const roles = await this.getUserRoleKeys(user.id);
+  private async issueTokens(
+    appUser: AppUserEntity,
+    securityUser: SecurityUserEntity,
+  ): Promise<AuthResponse> {
+    const roles = await this.getUserRoleKeys(appUser.id);
     const accessTokenExpiresIn = this.options.accessTokenExpiresIn ?? "15m";
     const accessToken = sign(
-      { sub: user.id, email: user.email, roles },
+      { sub: appUser.id, email: appUser.email, roles },
       this.options.jwtSecret,
       { expiresIn: accessTokenExpiresIn as SignOptions["expiresIn"] },
     );
@@ -248,7 +284,7 @@ export class SecurityAuthService {
     await this.refreshTokenRepo.save(
       this.refreshTokenRepo.create({
         id: randomUUID(),
-        userId: user.id,
+        userId: appUser.id,
         tokenHash: refreshTokenHash,
         expiresAt: refreshTokenExpiresAt,
         revokedAt: null,
@@ -260,14 +296,14 @@ export class SecurityAuthService {
       accessTokenExpiresIn,
       refreshToken,
       refreshTokenExpiresAt,
-      user: await this.toSafeUser(user),
+      user: await this.toSafeUser(appUser, securityUser),
     };
   }
 
   private async createEmailVerificationToken(userId: string) {
     const token = randomBytes(EMAIL_TOKEN_BYTES).toString("hex");
-    await this.usersRepo.update(
-      { id: userId },
+    await this.securityUsersRepo.update(
+      { userId },
       { emailVerificationToken: token },
     );
     return token;
@@ -302,18 +338,19 @@ export class SecurityAuthService {
     return roles.map((role) => normalizeRoleName(role.roleKey)).sort();
   }
 
-  private async toSafeUser(user: AppUserEntity) {
+  private async toSafeUser(
+    appUser: AppUserEntity,
+    securityUser: SecurityUserEntity,
+  ) {
     return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      id: appUser.id,
+      email: appUser.email,
       phone: null,
-      roles: await this.getUserRoleKeys(user.id),
-      emailVerifiedAt: user.emailVerifiedAt,
+      roles: await this.getUserRoleKeys(appUser.id),
+      emailVerifiedAt: securityUser.emailVerifiedAt,
       phoneVerifiedAt: null,
-      adminApprovedAt: user.adminApprovedAt,
-      isActive: user.isActive,
+      adminApprovedAt: securityUser.adminApprovedAt,
+      isActive: securityUser.isActive,
     };
   }
 }
