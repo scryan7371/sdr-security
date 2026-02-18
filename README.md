@@ -52,6 +52,51 @@ import { EmailService } from "./notifications/email.service";
 export class AppModule {}
 ```
 
+### User Table Ownership Model
+
+Consuming apps keep ownership of their own `app_user` table. `sdr-security`
+stores security/auth state in its own tables and links them by user id.
+
+- App-owned table:
+  - `app_user` (at minimum: `id`, `email`, plus any app-specific columns)
+- `sdr-security` tables:
+  - `security_user` (password hash, verified/approved/active flags)
+  - `security_identity` (provider links such as Google subject)
+  - `security_role`, `security_user_role`
+  - `refresh_token`
+  - `security_password_reset_token`
+
+Link key:
+
+- `security_* .user_id` -> `app_user.id`
+
+This lets each app evolve its user schema independently while reusing the same
+security workflows, guards, controllers, and migrations.
+
+Typical app query pattern is a join when you need security state:
+
+```sql
+SELECT u.id, u.email, su.is_active, su.admin_approved_at, su.email_verified_at
+FROM app_user u
+LEFT JOIN security_user su ON su.user_id = u.id
+WHERE u.id = $1;
+```
+
+Nest/TypeORM equivalent:
+
+```ts
+const row = await usersRepo
+  .createQueryBuilder("user")
+  .leftJoin("security_user", "securityUser", "securityUser.user_id = user.id")
+  .select("user.id", "id")
+  .addSelect("user.email", "email")
+  .addSelect("securityUser.is_active", "isActive")
+  .addSelect("securityUser.admin_approved_at", "adminApprovedAt")
+  .addSelect("securityUser.email_verified_at", "emailVerifiedAt")
+  .where("user.id = :id", { id: userId })
+  .getRawOne();
+```
+
 Optional Swagger setup in consuming app:
 
 ```ts
