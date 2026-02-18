@@ -10,7 +10,13 @@ import {
   Put,
   UseGuards,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from "@nestjs/swagger";
 import { SecurityAdminGuard } from "./security-admin.guard";
 import { SecurityJwtGuard } from "./security-jwt.guard";
 import { SecurityWorkflowsService } from "./security-workflows.service";
@@ -101,49 +107,72 @@ export class SecurityWorkflowsController {
     return this.workflowsService.removeRole(role);
   }
 
-  @Get("users/:id/roles")
+  @Get("users/:userId/roles")
   @UseGuards(SecurityJwtGuard, SecurityAdminGuard)
   @ApiOperation({ summary: "Get assigned roles for a user" })
+  @ApiParam({
+    name: "userId",
+    description: "User id from app_user.id",
+    type: String,
+  })
   @ApiBearerAuth()
-  async getUserRoles(@Param("id") id: string) {
-    return this.workflowsService.getUserRoles(id);
+  async getUserRoles(@Param("userId") userId: string) {
+    return this.workflowsService.getUserRoles(userId);
   }
 
-  @Put("users/:id/roles")
+  @Put("users/:userId/roles")
   @UseGuards(SecurityJwtGuard, SecurityAdminGuard)
   @ApiOperation({ summary: "Replace user roles" })
+  @ApiParam({
+    name: "userId",
+    description: "User id from app_user.id",
+    type: String,
+  })
   @ApiBearerAuth()
   @ApiBody({ type: SetUserRolesDto })
   async setUserRoles(
-    @Param("id") id: string,
+    @Param("userId") userId: string,
     @Body() body: { roles?: string[] },
   ) {
     if (!Array.isArray(body.roles)) {
       throw new BadRequestException("roles must be an array");
     }
-    return this.workflowsService.setUserRoles(id, body.roles);
+    return this.workflowsService.setUserRoles(userId, body.roles);
   }
 
-  @Post("users/:id/roles")
+  @Post("users/:userId/roles")
   @UseGuards(SecurityJwtGuard, SecurityAdminGuard)
   @ApiOperation({ summary: "Assign one role to a user" })
+  @ApiParam({
+    name: "userId",
+    description: "User id from app_user.id",
+    type: String,
+  })
   @ApiBearerAuth()
   @ApiBody({ type: AssignRoleDto })
   async assignUserRole(
-    @Param("id") id: string,
+    @Param("userId") userId: string,
     @Body() body: { role?: string },
   ) {
     if (!body.role || !body.role.trim()) {
       throw new BadRequestException("role is required");
     }
-    return this.workflowsService.assignRoleToUser(id, body.role);
+    return this.workflowsService.assignRoleToUser(userId, body.role);
   }
 
-  @Delete("users/:id/roles/:role")
+  @Delete("users/:userId/roles/:role")
   @UseGuards(SecurityJwtGuard, SecurityAdminGuard)
   @ApiOperation({ summary: "Remove one role from a user" })
+  @ApiParam({
+    name: "userId",
+    description: "User id from app_user.id",
+    type: String,
+  })
   @ApiBearerAuth()
-  async removeUserRole(@Param("id") id: string, @Param("role") role: string) {
-    return this.workflowsService.removeRoleFromUser(id, role);
+  async removeUserRole(
+    @Param("userId") userId: string,
+    @Param("role") role: string,
+  ) {
+    return this.workflowsService.removeRoleFromUser(userId, role);
   }
 }

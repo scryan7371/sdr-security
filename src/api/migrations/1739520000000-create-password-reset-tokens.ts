@@ -14,8 +14,6 @@ export class CreatePasswordResetTokens1739520000000 {
         "expires_at" timestamptz NOT NULL,
         "used_at" timestamptz,
         "created_at" timestamptz NOT NULL DEFAULT now(),
-        CONSTRAINT "CHK_security_password_reset_token_id_uuidv7" CHECK ("id"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
-        CONSTRAINT "CHK_security_password_reset_token_user_id_uuidv7" CHECK ("user_id"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
         CONSTRAINT "FK_security_password_reset_token_user_id" FOREIGN KEY ("user_id") REFERENCES ${userTableRef} ("id") ON DELETE CASCADE
       )
     `);

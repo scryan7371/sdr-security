@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client, ClientConfig } from "pg";
-import { securityMigrations } from "../api/migrations";
+import { allMigrations } from "../api/migrations";
 
 type QueryRunnerLike = {
   query: (sql: string, params?: unknown[]) => Promise<unknown>;
@@ -119,17 +119,10 @@ describe("database integration", () => {
     }
     await client.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
     await client.query(`SET search_path TO "${schema}", public`);
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "${schema}"."app_user" (
-        "id" uuid PRIMARY KEY NOT NULL,
-        "email" varchar NOT NULL
-      )
-    `);
-
     process.env.USER_TABLE = "app_user";
     process.env.USER_TABLE_SCHEMA = schema;
 
-    for (const Migration of securityMigrations) {
+    for (const Migration of allMigrations) {
       await new Migration().up(runner as never);
     }
   });
@@ -140,10 +133,9 @@ describe("database integration", () => {
     }
 
     if (!keepSchemaForDebug) {
-      for (const Migration of [...securityMigrations].reverse()) {
+      for (const Migration of [...allMigrations].reverse()) {
         await new Migration().down(runner as never);
       }
-      await client.query(`DROP TABLE IF EXISTS "${schema}"."app_user"`);
       await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     }
     await client.end();

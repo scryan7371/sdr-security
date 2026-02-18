@@ -11,8 +11,7 @@ export class CreateSecurityRoles1739510000000 {
         "description" text,
         "is_system" boolean NOT NULL DEFAULT false,
         "created_at" timestamptz NOT NULL DEFAULT now(),
-        "updated_at" timestamptz NOT NULL DEFAULT now(),
-        CONSTRAINT "CHK_security_role_id_uuidv7" CHECK ("id"::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
+        "updated_at" timestamptz NOT NULL DEFAULT now()
       )
     `);
 

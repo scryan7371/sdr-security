@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CreateAppUser1739490000000 } from "./1739490000000-create-app-user";
 import { AddRefreshTokens1700000000001 } from "./1700000000001-add-refresh-tokens";
 import { CreateSecurityIdentity1739500000000 } from "./1739500000000-create-security-identity";
 import { CreateSecurityRoles1739510000000 } from "./1739510000000-create-security-roles";
 import { CreateSecurityUserRoles1739515000000 } from "./1739515000000-create-security-user-roles";
 import { CreatePasswordResetTokens1739520000000 } from "./1739520000000-create-password-reset-tokens";
 import { CreateSecurityUser1739530000000 } from "./1739530000000-create-security-user";
-import { securityMigrations } from "./index";
+import { allMigrations, securityMigrations } from "./index";
 
 const originalEnv = { ...process.env };
 
@@ -15,6 +16,19 @@ afterEach(() => {
 });
 
 describe("security migrations", () => {
+  it("exports all migration list for test/dev", () => {
+    expect(allMigrations.length).toBe(7);
+    expect(allMigrations).toEqual([
+      CreateAppUser1739490000000,
+      AddRefreshTokens1700000000001,
+      CreateSecurityIdentity1739500000000,
+      CreateSecurityRoles1739510000000,
+      CreateSecurityUserRoles1739515000000,
+      CreatePasswordResetTokens1739520000000,
+      CreateSecurityUser1739530000000,
+    ]);
+  });
+
   it("exports migration list", () => {
     expect(securityMigrations.length).toBe(6);
     expect(securityMigrations).toEqual([
@@ -25,6 +39,21 @@ describe("security migrations", () => {
       CreatePasswordResetTokens1739520000000,
       CreateSecurityUser1739530000000,
     ]);
+  });
+
+  it("runs app user migration up/down", async () => {
+    const query = vi.fn().mockResolvedValue(undefined);
+    const migration = new CreateAppUser1739490000000();
+
+    await migration.up({ query });
+    await migration.down({ query });
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('CREATE TABLE IF NOT EXISTS "public"."app_user"'),
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('DROP TABLE IF EXISTS "public"."app_user"'),
+    );
   });
 
   it("runs refresh token migration up/down", async () => {
