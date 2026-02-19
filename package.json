@@ -4,11 +4,17 @@
   "description": "Reusable auth/security capability for API and app clients.",
   "main": "dist/index.js",
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
     "./nest": {
       "types": "./dist/nest/index.d.ts",
+      "require": "./dist/nest/index.js",
       "default": "./dist/nest/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "types": "dist/index.d.ts",
   "publishConfig": {
