@@ -5,7 +5,10 @@
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
-    "./nest": "./dist/nest/index.js"
+    "./nest": {
+      "types": "./dist/nest/index.d.ts",
+      "default": "./dist/nest/index.js"
+    }
   },
   "types": "dist/index.d.ts",
   "publishConfig": {
@@ -72,5 +75,12 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.56.0",
     "vitest": "4.0.18"
+  },
+  "typesVersions": {
+    "*": {
+      "nest": [
+        "dist/nest/index.d.ts"
+      ]
+    }
   }
 }
