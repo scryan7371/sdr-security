@@ -4,6 +4,8 @@ export type UserRole = string;
 export type SafeUser = {
   id: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
   phone: string | null;
   roles: UserRole[];
   emailVerifiedAt: string | Date | null;
@@ -32,6 +34,8 @@ export type AuthResponse = {
   accessTokenExpiresIn: string;
   refreshToken: string;
   refreshTokenExpiresAt: string | Date;
+  userId: string;
+  roles: UserRole[];
   user: SafeUser;
 };
 

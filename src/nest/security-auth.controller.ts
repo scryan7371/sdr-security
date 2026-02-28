@@ -138,11 +138,4 @@ export class SecurityAuthController {
     return this.authService.verifyEmailByToken(token);
   }
 
-  @UseGuards(SecurityJwtGuard)
-  @Get("me/roles")
-  @ApiOperation({ summary: "Get roles for authenticated user" })
-  @ApiBearerAuth()
-  async getMyRoles(@Req() request: AuthedRequest) {
-    return this.authService.getMyRoles(request.user.sub);
-  }
 }

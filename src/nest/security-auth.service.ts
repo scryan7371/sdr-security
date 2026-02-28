@@ -294,12 +294,15 @@ export class SecurityAuthService {
       }),
     );
 
+    const user = await this.toSafeUser(appUser, securityUser);
     return {
       accessToken,
       accessTokenExpiresIn,
       refreshToken,
       refreshTokenExpiresAt,
-      user: await this.toSafeUser(appUser, securityUser),
+      userId: appUser.id,
+      roles,
+      user,
     };
   }
 
@@ -348,6 +351,8 @@ export class SecurityAuthService {
     return {
       id: appUser.id,
       email: appUser.email,
+      firstName: appUser.firstName ?? null,
+      lastName: appUser.lastName ?? null,
       phone: null,
       roles: await this.getUserRoleKeys(appUser.id),
       emailVerifiedAt: securityUser.emailVerifiedAt,

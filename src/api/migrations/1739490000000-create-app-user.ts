@@ -9,7 +9,9 @@ export class CreateAppUser1739490000000 {
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS ${userTableRef} (
         "id" uuid PRIMARY KEY NOT NULL,
-        "email" varchar NOT NULL
+        "email" varchar NOT NULL,
+        "first_name" varchar,
+        "last_name" varchar
       )
     `);
   }

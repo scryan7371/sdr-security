@@ -11,7 +11,6 @@ const makeAuthService = () => ({
   requestForgotPassword: vi.fn(),
   resetPassword: vi.fn(),
   verifyEmailByToken: vi.fn(),
-  getMyRoles: vi.fn(),
 });
 
 describe("SecurityAuthController", () => {
@@ -117,12 +116,5 @@ describe("SecurityAuthController", () => {
       success: true,
     });
     expect(service.verifyEmailByToken).toHaveBeenCalledWith("token-1");
-  });
-
-  it("delegates getMyRoles", async () => {
-    service.getMyRoles.mockResolvedValue({ userId: "u1", roles: ["ADMIN"] });
-    await expect(
-      controller.getMyRoles({ user: { sub: "u1" } }),
-    ).resolves.toEqual({ userId: "u1", roles: ["ADMIN"] });
   });
 });

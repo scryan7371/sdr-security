@@ -1,4 +1,4 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common";
+import { DynamicModule, Global, Module, Provider } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { SecurityWorkflowNotifier } from "./contracts";
 import { AppUserEntity } from "./entities/app-user.entity";
@@ -24,6 +24,7 @@ const noopNotifier: SecurityWorkflowNotifier = {
   sendUserAccountApproved: async () => undefined,
 };
 
+@Global()
 @Module({})
 export class SecurityAuthModule {
   static forRoot(options: {
@@ -59,7 +60,13 @@ export class SecurityAuthModule {
         SecurityAdminGuard,
         notifierProvider,
       ],
-      exports: [SecurityAuthService, SecurityWorkflowsService],
+      exports: [
+        SECURITY_AUTH_OPTIONS,
+        SecurityAuthService,
+        SecurityWorkflowsService,
+        SecurityJwtGuard,
+        SecurityAdminGuard,
+      ],
     };
   }
 }

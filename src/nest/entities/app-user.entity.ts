@@ -7,4 +7,10 @@ export class AppUserEntity {
 
   @Column({ type: "varchar" })
   email!: string;
+
+  @Column({ type: "varchar", nullable: true, name: "first_name" })
+  firstName!: string | null;
+
+  @Column({ type: "varchar", nullable: true, name: "last_name" })
+  lastName!: string | null;
 }
