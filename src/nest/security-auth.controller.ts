@@ -137,5 +137,4 @@ export class SecurityAuthController {
     }
     return this.authService.verifyEmailByToken(token);
   }
-
 }
