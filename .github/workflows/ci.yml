@@ -28,7 +28,7 @@ jobs:
         run: npm test
 
       - name: Run coverage
-        run: npm run test:cov
+        run: npm run coverage
 
       - name: Build package
         run: npm run build
