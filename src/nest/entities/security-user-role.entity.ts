@@ -1,4 +1,4 @@
-import { v7 as uuidv7 } from "uuid";
+import { uuidv7 } from "../uuid-v7";
 import { BeforeInsert, Column, Entity, PrimaryColumn } from "typeorm";
 
 @Entity({ name: "security_user_role" })

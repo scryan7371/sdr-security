@@ -45,8 +45,7 @@
   "dependencies": {
     "@babel/runtime": "7.29.2",
     "bcryptjs": "3.0.3",
-    "jsonwebtoken": "9.0.3",
-    "uuid": "13.0.0"
+    "jsonwebtoken": "9.0.3"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",

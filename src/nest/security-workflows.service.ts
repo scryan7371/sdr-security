@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
-import { v7 as uuidv7 } from "uuid";
+import { uuidv7 } from "./uuid-v7";
 import { ADMIN_ROLE } from "../api/contracts";
 import { normalizeRoleName } from "../api/roles";
 import { AppUserEntity } from "./entities/app-user.entity";

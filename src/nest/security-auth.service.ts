@@ -7,7 +7,7 @@ import {
 import { randomBytes } from "crypto";
 import { compare, hash } from "bcryptjs";
 import { sign, type SignOptions } from "jsonwebtoken";
-import { v7 as uuidv7 } from "uuid";
+import { uuidv7 } from "./uuid-v7";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, IsNull, Repository } from "typeorm";
 import { AuthResponse, RegisterResponse } from "../api/contracts";

@@ -5,7 +5,7 @@ import {
   Entity,
   PrimaryColumn,
 } from "typeorm";
-import { v7 as uuidv7 } from "uuid";
+import { uuidv7 } from "../uuid-v7";
 
 @Entity({ name: "security_password_reset_token" })
 export class PasswordResetTokenEntity {
