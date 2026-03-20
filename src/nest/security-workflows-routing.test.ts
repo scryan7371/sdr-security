@@ -10,9 +10,9 @@ const routePath = (methodName: keyof SecurityWorkflowsController) =>
 
 describe("SecurityWorkflowsController route metadata", () => {
   it("defines the expected controller base path", () => {
-    expect(Reflect.getMetadata(PATH_METADATA, SecurityWorkflowsController)).toBe(
-      "security/workflows",
-    );
+    expect(
+      Reflect.getMetadata(PATH_METADATA, SecurityWorkflowsController),
+    ).toBe("security/workflows");
   });
 
   it("defines the expected workflow routes", () => {

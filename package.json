@@ -80,7 +80,7 @@
     "@types/pg": "8.18.0",
     "@types/supertest": "^7.2.0",
     "@vitest/coverage-v8": "^4.1.0",
-    "eslint": "10.0.3",
+    "eslint": "9.39.4",
     "pg": "8.20.0",
     "prettier": "3.8.1",
     "supertest": "^7.2.2",
