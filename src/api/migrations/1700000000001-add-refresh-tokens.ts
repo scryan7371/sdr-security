@@ -12,13 +12,13 @@ export class AddRefreshTokens1700000000001 {
         "token_hash" varchar NOT NULL,
         "expires_at" timestamptz NOT NULL,
         "revoked_at" timestamptz,
-        "userId" uuid,
+        "user_id" uuid,
         "created_at" timestamptz NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-        CONSTRAINT "FK_refresh_token_user" FOREIGN KEY ("userId") REFERENCES ${userTableRef} ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+        CONSTRAINT "FK_refresh_token_user" FOREIGN KEY ("user_id") REFERENCES ${userTableRef} ("id") ON DELETE CASCADE ON UPDATE NO ACTION
       )
     `);
     await queryRunner.query(
-      `CREATE INDEX "IDX_refresh_token_user" ON "refresh_token" ("userId")`,
+      `CREATE INDEX "IDX_refresh_token_user" ON "refresh_token" ("user_id")`,
     );
   }
 

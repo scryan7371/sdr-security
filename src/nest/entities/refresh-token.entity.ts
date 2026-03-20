@@ -14,7 +14,7 @@ export class RefreshTokenEntity {
   @Column({ type: "timestamptz", name: "revoked_at", nullable: true })
   revokedAt!: Date | null;
 
-  @Column({ type: "uuid", name: "userId", nullable: true })
+  @Column({ type: "uuid", name: "user_id", nullable: true })
   userId!: string | null;
 
   @CreateDateColumn({ name: "created_at" })
