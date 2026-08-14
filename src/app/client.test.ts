@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSecurityClient } from "./client";
 
 type MockResponse = { ok: boolean; status: number; body: unknown };
@@ -17,6 +17,27 @@ const makeFetch = (responses: MockResponse[]) => {
 };
 
 describe("createSecurityClient", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uses global fetch and handles an empty successful response", async () => {
+    const fetchImpl = makeFetch([{ ok: true, status: 204, body: undefined }]);
+    vi.stubGlobal("fetch", fetchImpl);
+    const client = createSecurityClient({
+      baseUrl: "https://api.example.com",
+      getAccessToken: () => null,
+    });
+
+    await expect(client.getMyRoles()).resolves.toEqual({});
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.example.com/security/auth/me/roles",
+      expect.objectContaining({
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  });
+
   it("sends auth header and JSON body", async () => {
     const fetchImpl = makeFetch([
       { ok: true, status: 200, body: { success: true } },

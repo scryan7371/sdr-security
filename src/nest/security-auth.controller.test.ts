@@ -5,7 +5,7 @@ import { SecurityAuthController } from "./security-auth.controller";
 const makeAuthService = () => ({
   register: vi.fn(),
   login: vi.fn(),
-  refresh: vi.fn(),
+  refreshAuthToken: vi.fn(),
   logout: vi.fn(),
   changePassword: vi.fn(),
   requestForgotPassword: vi.fn(),
@@ -52,7 +52,7 @@ describe("SecurityAuthController", () => {
 
   it("delegates login/refresh/logout", async () => {
     service.login.mockResolvedValue({ accessToken: "a" });
-    service.refresh.mockResolvedValue({ accessToken: "b" });
+    service.refreshAuthToken.mockResolvedValue({ accessToken: "b" });
     service.logout.mockResolvedValue({ success: true });
 
     await expect(

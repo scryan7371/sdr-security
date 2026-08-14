@@ -223,6 +223,77 @@ Install a pinned version:
 npm install @scryan7371/sdr-security@0.1.0
 ```
 
+## Drizzle
+
+Shared Drizzle schema definitions live in `src/drizzle/schema.ts` and are
+published from `@scryan7371/sdr-security/drizzle`.
+
+Set `DATABASE_URL` (or the existing `DB_HOST`, `DB_PORT`, `DB_USER`,
+`DB_PASSWORD`, and `DB_NAME` variables), then use:
+
+```bash
+npm run db:generate
+npm run db:migrate
+npm run db:push
+npm run db:studio
+npm run db:check
+```
+
+Generated SQL migrations and Drizzle metadata are written to `drizzle/`.
+
+The consuming application must create its standardized `users` table before
+running the security migration. The required contract is a public `users`
+table with a UUID primary key named `id`; the application remains the owner of
+that table.
+
+Run the packaged security migrations with an existing node-postgres Drizzle
+database:
+
+```ts
+import { migrateSecurityDatabase } from "@scryan7371/sdr-security/drizzle";
+
+await migrateSecurityDatabase(db);
+```
+
+The helper uses its own `__sdr_security_migrations` journal so it can safely
+run alongside migrations owned by the consuming application. It creates only
+the security-owned tables and foreign keys back to `users.id`.
+
+### Nest runtime connection
+
+Register the shared Drizzle provider once in the consuming app:
+
+```ts
+import { Module } from "@nestjs/common";
+import { SecurityDrizzleModule } from "@scryan7371/sdr-security/nest";
+
+@Module({
+  imports: [SecurityDrizzleModule.forRoot()],
+})
+export class AppModule {}
+```
+
+By default the connection uses `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`,
+and `DB_NAME`. The same values can be passed directly to `forRoot` when needed.
+
+Inject the typed database into a service:
+
+```ts
+import { Inject, Injectable } from "@nestjs/common";
+import {
+  SECURITY_DRIZZLE_DB,
+  SecurityDatabase,
+} from "@scryan7371/sdr-security/nest";
+
+@Injectable()
+export class UsersService {
+  constructor(
+    @Inject(SECURITY_DRIZZLE_DB)
+    private readonly db: SecurityDatabase,
+  ) {}
+}
+```
+
 ## Database Integration Test
 
 A sample Postgres integration test is included at:

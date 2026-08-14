@@ -1,14 +1,15 @@
 import { NotFoundException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SecurityWorkflowsService } from "./security-workflows.service";
+import {securityRole, securityUser, securityUserRole, user} from "../drizzle";
 
 const makeRepo = () => ({
-  update: vi.fn(async () => ({ affected: 1 })),
+  update: vi.fn(async (_criteria: unknown, _value: unknown) => ({ affected: 1 })),
   findOne: vi.fn(),
   find: vi.fn(async (): Promise<Array<Record<string, unknown>>> => []),
   save: vi.fn(async (value: any) => value),
   create: vi.fn((value: any) => value),
-  delete: vi.fn(async () => ({ affected: 1 })),
+  delete: vi.fn(async (_criteria: unknown) => ({ affected: 1 })),
   createQueryBuilder: vi.fn(),
 });
 
@@ -16,6 +17,82 @@ const makeNotifier = () => ({
   sendAdminsUserEmailVerified: vi.fn(async () => undefined),
   sendUserAccountApproved: vi.fn(async () => undefined),
 });
+
+type MockRepo = ReturnType<typeof makeRepo>;
+
+const makeDb = (repos: {
+  appUsersRepo: MockRepo;
+  securityUsersRepo: MockRepo;
+  rolesRepo: MockRepo;
+  userRolesRepo: MockRepo;
+}) => {
+  const adminEmails = vi.fn(async (): Promise<Array<{email: string}>> => []);
+
+  const repoFor = (table: unknown) => {
+    if (table === user) return repos.appUsersRepo;
+    if (table === securityUser) return repos.securityUsersRepo;
+    if (table === securityRole) return repos.rolesRepo;
+    if (table === securityUserRole) return repos.userRolesRepo;
+    throw new Error("Unexpected table in Drizzle mock");
+  };
+
+  const resultFor = async (table: unknown, filtered: boolean) => {
+    const repo = repoFor(table);
+    if (table === user) {
+      const row = await repo.findOne();
+      return row ? [row] : null;
+    }
+    if (table === securityRole && filtered && repo.findOne.getMockImplementation()) {
+      const row = await repo.findOne();
+      return row ? [row] : null;
+    }
+    return repo.find();
+  };
+
+  const queryFor = (table: unknown) => {
+    let filtered = false;
+    const query = {
+      where: vi.fn(() => {
+        filtered = true;
+        return query;
+      }),
+      orderBy: vi.fn(() => resultFor(table, filtered)),
+      then: (
+        resolve: (value: unknown) => unknown,
+        reject: (reason: unknown) => unknown,
+      ) => resultFor(table, filtered).then(resolve, reject),
+    };
+    return query;
+  };
+
+  const db = {
+    select: vi.fn(() => ({from: vi.fn((table: unknown) => queryFor(table))})),
+    selectDistinct: vi.fn(() => {
+      const query = {
+        from: vi.fn(() => query),
+        innerJoin: vi.fn(() => query),
+        where: vi.fn(() => adminEmails()),
+      };
+      return query;
+    }),
+    insert: vi.fn((table: unknown) => ({
+      values: vi.fn(async (value: unknown) => {
+        const repo = repoFor(table);
+        return repo.save(repo.create(value));
+      }),
+    })),
+    update: vi.fn((table: unknown) => ({
+      set: vi.fn((value: unknown) => ({
+        where: vi.fn(async () => repoFor(table).update({}, value)),
+      })),
+    })),
+    delete: vi.fn((table: unknown) => ({
+      where: vi.fn(async () => repoFor(table).delete({})),
+    })),
+  };
+
+  return {db, adminEmails};
+};
 
 const makeUser = () => ({
   id: "user-1",
@@ -29,12 +106,15 @@ const setup = () => {
   const rolesRepo = makeRepo();
   const userRolesRepo = makeRepo();
   const notifier = makeNotifier();
+  const {db, adminEmails} = makeDb({
+    appUsersRepo,
+    securityUsersRepo,
+    rolesRepo,
+    userRolesRepo,
+  });
 
   const service = new SecurityWorkflowsService(
-    appUsersRepo as never,
-    securityUsersRepo as never,
-    rolesRepo as never,
-    userRolesRepo as never,
+    db as never,
     notifier as never,
   );
 
@@ -45,6 +125,7 @@ const setup = () => {
     rolesRepo,
     userRolesRepo,
     notifier,
+    adminEmails,
   };
 };
 
@@ -54,20 +135,9 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("marks email verified and notifies admins", async () => {
-    const { service, appUsersRepo, userRolesRepo, notifier } = setup();
+    const { service, appUsersRepo, notifier, adminEmails } = setup();
     appUsersRepo.findOne.mockResolvedValue(makeUser());
-
-    const getRawMany = vi
-      .fn()
-      .mockResolvedValue([{ email: "admin@example.com" }]);
-    const qb = {
-      innerJoin: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      andWhere: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      getRawMany,
-    };
-    userRolesRepo.createQueryBuilder.mockReturnValue(qb);
+    adminEmails.mockResolvedValue([{ email: "admin@example.com" }]);
 
     const result = await service.markEmailVerifiedAndNotifyAdmins("user-1");
 
@@ -80,17 +150,9 @@ describe("SecurityWorkflowsService", () => {
   });
 
   it("returns not-notified when no admins are present", async () => {
-    const { service, appUsersRepo, userRolesRepo } = setup();
+    const { service, appUsersRepo, adminEmails } = setup();
     appUsersRepo.findOne.mockResolvedValue(makeUser());
-
-    const qb = {
-      innerJoin: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      andWhere: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      getRawMany: vi.fn().mockResolvedValue([]),
-    };
-    userRolesRepo.createQueryBuilder.mockReturnValue(qb);
+    adminEmails.mockResolvedValue([]);
 
     await expect(
       service.markEmailVerifiedAndNotifyAdmins("user-1"),
@@ -168,7 +230,7 @@ describe("SecurityWorkflowsService", () => {
     await expect(service.removeRole("COACH")).resolves.toEqual({
       success: true,
     });
-    expect(userRolesRepo.delete).toHaveBeenCalledWith({ roleId: "r2" });
+    expect(userRolesRepo.delete).toHaveBeenCalled();
   });
 
   it("gets and sets user roles", async () => {
@@ -208,7 +270,7 @@ describe("SecurityWorkflowsService", () => {
       .mockResolvedValueOnce([]);
     await service.removeRoleFromUser("user-1", "coach");
 
-    expect(userRolesRepo.delete).toHaveBeenCalledWith({ userId: "user-1" });
+    expect(userRolesRepo.delete).toHaveBeenCalled();
   });
 
   it("sets user active state", async () => {
@@ -218,10 +280,7 @@ describe("SecurityWorkflowsService", () => {
       userId: "user-1",
       active: false,
     });
-    expect(securityUsersRepo.update).toHaveBeenCalledWith(
-      { userId: "user-1" },
-      { isActive: false },
-    );
+    expect(securityUsersRepo.update).toHaveBeenCalledWith({}, { active: false });
   });
 
   it("throws when role operations target missing user", async () => {

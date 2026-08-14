@@ -29,7 +29,7 @@ describe("Security module factories", () => {
     );
   });
 
-  it("builds auth module with default notifier", () => {
+  it("builds auth module with working default providers", async () => {
     const dynamicModule = SecurityAuthModule.forRoot({
       auth: { jwtSecret: "secret" },
     });
@@ -43,19 +43,67 @@ describe("Security module factories", () => {
           SECURITY_WORKFLOW_NOTIFIER,
     );
 
-    expect(notifier).toBeDefined();
+    const defaultNotifier = notifier as {
+      useValue: {
+        sendEmailVerification: () => Promise<void>;
+        sendPasswordReset: () => Promise<void>;
+        sendAdminsUserEmailVerified: () => Promise<void>;
+        sendUserAccountApproved: () => Promise<void>;
+      };
+    };
+
+    expect(dynamicModule.exports).toBeDefined();
+    await expect(
+      defaultNotifier.useValue.sendEmailVerification(),
+    ).resolves.toBeUndefined();
+    await expect(
+      defaultNotifier.useValue.sendPasswordReset(),
+    ).resolves.toBeUndefined();
+    await expect(
+      defaultNotifier.useValue.sendAdminsUserEmailVerified(),
+    ).resolves.toBeUndefined();
+    await expect(
+      defaultNotifier.useValue.sendUserAccountApproved(),
+    ).resolves.toBeUndefined();
   });
 
-  it("builds workflows module with default auth options", () => {
+  it("builds workflows module with working default providers", async () => {
     const dynamicModule = SecurityWorkflowsModule.forRoot();
+    const providers = dynamicModule.providers ?? [];
+    const authProvider = providers.find(
+      (provider) =>
+        typeof provider === "object" &&
+        provider !== null &&
+        "provide" in provider &&
+        provider.provide === SECURITY_AUTH_OPTIONS,
+    ) as { useValue: { jwtSecret: string } };
+    const notifierProvider = providers.find(
+      (provider) =>
+        typeof provider === "object" &&
+        provider !== null &&
+        "provide" in provider &&
+        provider.provide === SECURITY_WORKFLOW_NOTIFIER,
+    ) as {
+      useValue: {
+        sendAdminsUserEmailVerified: () => Promise<void>;
+        sendUserAccountApproved: () => Promise<void>;
+      };
+    };
 
     expect(dynamicModule.module).toBe(SecurityWorkflowsModule);
+    expect(authProvider.useValue).toEqual({ jwtSecret: "dev-secret" });
     expect(dynamicModule.providers).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ provide: SECURITY_AUTH_OPTIONS }),
         expect.objectContaining({ provide: SECURITY_WORKFLOW_NOTIFIER }),
       ]),
     );
+    await expect(
+      notifierProvider.useValue.sendAdminsUserEmailVerified(),
+    ).resolves.toBeUndefined();
+    await expect(
+      notifierProvider.useValue.sendUserAccountApproved(),
+    ).resolves.toBeUndefined();
   });
 
   it("builds workflows module with custom options", () => {

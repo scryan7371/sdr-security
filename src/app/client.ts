@@ -21,11 +21,13 @@ export type SecurityClientOptions = {
 export const createSecurityClient = (options: SecurityClientOptions) => {
   const fetchImpl = options.fetchImpl ?? fetch;
 
-  const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const request = async <T>(
+    path: string,
+    init?: Omit<RequestInit, "headers">,
+  ): Promise<T> => {
     const token = options.getAccessToken();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...(init?.headers ? (init.headers as Record<string, string>) : {}),
     };
 
     if (token) {

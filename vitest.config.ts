@@ -9,7 +9,16 @@ export default defineConfig({
       reporter: ["text", "lcov", "html"],
       reportsDirectory: "./coverage",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts"],
+      exclude: [
+        "src/**/*.test.ts",
+        "src/**/index.ts",
+        "src/drizzle/schema.ts",
+        "src/drizzle/migration-schema.ts",
+        "src/drizzle/runtime-schema.ts",
+        "src/drizzle/schemas/**/*.ts",
+        "src/nest/contracts.ts",
+        "src/nest/security-auth.options.ts",
+      ],
       thresholds: {
         lines: 70,
         statements: 70,
