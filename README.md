@@ -25,6 +25,7 @@ Import the Nest surface from `@scryan7371/sdr-security/nest`.
 ```ts
 import { Module } from "@nestjs/common";
 import {
+  SecurityDrizzleModule,
   SecurityWorkflowsModule,
   SECURITY_WORKFLOW_NOTIFIER,
 } from "@scryan7371/sdr-security/nest";
@@ -32,6 +33,7 @@ import { EmailService } from "./notifications/email.service";
 
 @Module({
   imports: [
+    SecurityDrizzleModule.forRoot(),
     SecurityWorkflowsModule.forRoot({
       notifierProvider: {
         provide: SECURITY_WORKFLOW_NOTIFIER,
@@ -54,21 +56,21 @@ export class AppModule {}
 
 ### User Table Ownership Model
 
-Consuming apps keep ownership of their own `app_user` table. `sdr-security`
+Consuming apps keep ownership of the shared `users` table contract. `sdr-security`
 stores security/auth state in its own tables and links them by user id.
 
 - App-owned table:
-  - `app_user` (at minimum: `id`, `email`, plus any app-specific columns)
+  - `users` (at minimum: UUID primary key `id`; the published runtime schema also
+    exposes `email` for the bundled auth services)
 - `sdr-security` tables:
-  - `security_user` (password hash, verified/approved/active flags)
-  - `security_identity` (provider links such as Google subject)
-  - `security_role`, `security_user_role`
-  - `refresh_token`
-  - `security_password_reset_token`
+  - `security_users` (password hash, verified/approved/active flags)
+  - `security_roles`, `security_user_roles`
+  - `refresh_tokens`
+  - `password_reset_tokens`
 
 Link key:
 
-- `security_* .user_id` -> `app_user.id`
+- Security table `user_id` columns reference `users.id`.
 
 This lets each app evolve its user schema independently while reusing the same
 security workflows, guards, controllers, and migrations.
@@ -76,25 +78,30 @@ security workflows, guards, controllers, and migrations.
 Typical app query pattern is a join when you need security state:
 
 ```sql
-SELECT u.id, u.email, su.is_active, su.admin_approved_at, su.email_verified_at
-FROM app_user u
-LEFT JOIN security_user su ON su.user_id = u.id
+SELECT u.id, u.email, su.active, su.admin_approved_at, su.email_verified_at
+FROM users u
+LEFT JOIN security_users su ON su.user_id = u.id
 WHERE u.id = $1;
 ```
 
-Nest/TypeORM equivalent:
+Drizzle equivalent:
 
 ```ts
-const row = await usersRepo
-  .createQueryBuilder("user")
-  .leftJoin("security_user", "securityUser", "securityUser.user_id = user.id")
-  .select("user.id", "id")
-  .addSelect("user.email", "email")
-  .addSelect("securityUser.is_active", "isActive")
-  .addSelect("securityUser.admin_approved_at", "adminApprovedAt")
-  .addSelect("securityUser.email_verified_at", "emailVerifiedAt")
-  .where("user.id = :id", { id: userId })
-  .getRawOne();
+import { eq } from "drizzle-orm";
+import { securityUser, user } from "@scryan7371/sdr-security/drizzle";
+
+const [row] = await db
+  .select({
+    id: user.id,
+    email: user.email,
+    active: securityUser.active,
+    adminApprovedAt: securityUser.adminApprovedAt,
+    emailVerifiedAt: securityUser.emailVerifiedAt,
+  })
+  .from(user)
+  .leftJoin(securityUser, eq(securityUser.userId, user.id))
+  .where(eq(user.id, userId))
+  .limit(1);
 ```
 
 Optional Swagger setup in consuming app:
@@ -182,54 +189,21 @@ Methods:
 - `requestPhoneVerification`
 - `verifyPhone`
 
-## Publish (npmjs)
-
-1. Configure project-local npm auth (`.npmrc`):
-
-```ini
-registry=https://registry.npmjs.org/
-@scryan7371:registry=https://registry.npmjs.org/
-//registry.npmjs.org/:_authToken=${NPM_TOKEN}
-```
-
-2. Set token, bump version, and publish:
-
-```bash
-export NPM_TOKEN=xxxx
-npm version patch
-npm publish --access public --registry=https://registry.npmjs.org --userconfig .npmrc
-```
-
-3. Push commit and tags:
-
-```bash
-git push
-git push --tags
-```
-
-## CI Publish (GitHub Actions)
-
-Tag pushes like `sdr-security-v*` trigger `.github/workflows/publish.yml`.
-
-Required repo secret:
-
-- `NPM_TOKEN` (npm granular token with read/write + bypass 2FA for automation).
-
 ## Install
 
 Install a pinned version:
 
 ```bash
-npm install @scryan7371/sdr-security@0.1.0
+npm install @scryan7371/sdr-security@0.1.12
 ```
 
-## Drizzle
+## Drizzle Integration
 
 Shared Drizzle schema definitions live in `src/drizzle/schema.ts` and are
 published from `@scryan7371/sdr-security/drizzle`.
 
-Set `DATABASE_URL` (or the existing `DB_HOST`, `DB_PORT`, `DB_USER`,
-`DB_PASSWORD`, and `DB_NAME` variables), then use:
+For local schema and migration development, set `DB_HOST`, `DB_PORT`,
+`DB_USER`, `DB_PASSWORD`, and `DB_NAME`, then use:
 
 ```bash
 npm run db:generate
@@ -250,18 +224,27 @@ Run the packaged security migrations with an existing node-postgres Drizzle
 database:
 
 ```ts
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { migrateSecurityDatabase } from "@scryan7371/sdr-security/drizzle";
 
+// The app migration set must create public.users before security migrations run.
+await migrate(db, {
+  migrationsFolder: "./drizzle",
+  migrationsTable: "__drizzle_migrations",
+});
 await migrateSecurityDatabase(db);
 ```
 
 The helper uses its own `__sdr_security_migrations` journal so it can safely
 run alongside migrations owned by the consuming application. It creates only
-the security-owned tables and foreign keys back to `users.id`.
+the security-owned tables and foreign keys back to `users.id`. Run both calls
+at application startup or in the consuming application's deployment migration
+command; do not copy the package's generated SQL into the application.
 
 ### Nest runtime connection
 
-Register the shared Drizzle provider once in the consuming app:
+Register the shared Drizzle provider once in the consuming app. Import it
+before any security feature modules:
 
 ```ts
 import { Module } from "@nestjs/common";
@@ -294,38 +277,13 @@ export class UsersService {
 }
 ```
 
-## Database Integration Test
+## Release and Publish
 
-A sample Postgres integration test is included at:
+GitHub Actions publishes the package when a tag matching
+`sdr-security-v*` is pushed. The repository must have an `NPM_TOKEN` Actions
+secret with permission to publish this package.
 
-- `src/integration/database.integration.test.ts`
-
-Run it with:
-
-```bash
-npm run test:db
-```
-
-Configuration resolution order:
-
-1. `.env.test` (if present)
-2. `.env.dev` (if present)
-3. existing process env
-
-Supported env vars:
-
-- `SECURITY_TEST_DATABASE_URL` (preferred)
-- or `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-- optional fallback: `DATABASE_URL`
-- optional debug:
-  - `SECURITY_TEST_KEEP_SCHEMA=true` (do not drop schema after test run)
-  - `SECURITY_TEST_SCHEMA=your_schema_name` (use fixed schema name)
-
-See `.env.test.example` for a template.
-
-## Release Script
-
-You can automate version bump + tag + push with:
+Start from a clean `main` branch, then use one of the release scripts:
 
 ```bash
 npm run release:patch
@@ -333,7 +291,7 @@ npm run release:minor
 npm run release:major
 ```
 
-What it does:
+The script:
 
 1. Verifies clean git working tree
 2. Runs `npm test`
@@ -344,3 +302,21 @@ What it does:
 7. Pushes commit and tag
 
 This tag format triggers `.github/workflows/publish.yml`.
+
+Do not create a plain version tag such as `0.1.12`; it does not match the
+publish workflow trigger. If `package.json` has already been bumped and the
+release commit already exists, tag that commit without bumping the version
+again:
+
+```bash
+VERSION=$(node -p "require('./package.json').version")
+git tag "sdr-security-v${VERSION}"
+git push origin "sdr-security-v${VERSION}"
+```
+
+Confirm the publish under **GitHub Actions → Publish package**, then verify the
+published version:
+
+```bash
+npm view @scryan7371/sdr-security version
+```
