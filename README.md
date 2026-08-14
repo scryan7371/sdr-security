@@ -320,3 +320,30 @@ published version:
 ```bash
 npm view @scryan7371/sdr-security version
 ```
+
+### Renew an expired npm token
+
+An npm `E404 Not Found` error during the publish `PUT` can mean that the
+workflow's npm token is expired, revoked, or missing publish permission.
+
+1. Sign in to [npmjs.com](https://www.npmjs.com/) as `scryan7371`.
+2. Open **Profile → Access Tokens → Generate New Token**.
+3. Create a **Granular Access Token** with:
+   - **Packages and scopes:** Read and write
+   - **Package selection:** All packages, or the `@scryan7371` scope
+   - **Bypass two-factor authentication:** Enabled
+   - **IP restrictions:** None
+   - **Expiration:** Choose the longest duration allowed by npm and schedule a
+     reminder to renew it before that date.
+4. Copy the token when npm displays it. Do not commit it or add it to a local
+   configuration file.
+5. In the GitHub `sdr-security` repository, open **Settings → Secrets and
+   variables → Actions**.
+6. Update the `NPM_TOKEN` repository secret with the new token. Paste only the
+   token, without quotes or surrounding whitespace.
+7. Open **Actions → Publish package**, select the failed run, and choose
+   **Re-run jobs → Re-run failed jobs**.
+
+If the failed version has not been published, do not bump the package version
+or create another tag. Re-run the existing tagged workflow after replacing the
+secret.
