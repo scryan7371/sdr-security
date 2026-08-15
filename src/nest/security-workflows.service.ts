@@ -28,7 +28,10 @@ export class SecurityWorkflowsService {
         }
         await this.notifier.sendAdminsUserEmailVerified({
             adminEmails, user: {
-                id: theUser[0].id, email: theUser[0].email,
+                id: theUser[0].id,
+                email: theUser[0].email,
+                firstName: theUser[0].firstName,
+                lastName: theUser[0].lastName,
             },
         });
         return {success: true as const, notified: true as const, adminEmails};
@@ -45,6 +48,8 @@ export class SecurityWorkflowsService {
         }
         await this.notifier.sendUserAccountApproved({
             email: theUser[0].email,
+            firstName: theUser[0].firstName,
+            lastName: theUser[0].lastName,
         });
         return {success: true as const, notified: true as const};
     }

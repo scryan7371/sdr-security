@@ -1,7 +1,7 @@
 export const ADMIN_ROLE = "ADMIN";
 export type UserRole = string;
 export type SafeUser = {
-    id: string; email: string; roles: UserRole[];
+    id: string; email: string; firstName: string; lastName: string; roles: UserRole[];
 };
 export type UserRolesResponse = {
     userId: string; roles: UserRole[];

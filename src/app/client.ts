@@ -54,7 +54,12 @@ export const createSecurityClient = (options: SecurityClientOptions) => {
   };
 
   return {
-    register: (payload: { email: string; password: string }) =>
+    register: (payload: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+    }) =>
       request<RegisterResponse>("/security/auth/register", {
         method: "POST",
         body: JSON.stringify(payload),

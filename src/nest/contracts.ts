@@ -1,12 +1,16 @@
 export type SecurityWorkflowUser = {
   id: string;
   email: string;
+  firstName: string;
+  lastName: string;
 };
 
 export type SecurityWorkflowNotifier = {
   sendEmailVerification?: (params: {
     email: string;
     token: string;
+    firstName: string;
+    lastName: string;
   }) => Promise<void>;
   sendPasswordReset?: (params: {
     email: string;
@@ -16,5 +20,9 @@ export type SecurityWorkflowNotifier = {
     adminEmails: string[];
     user: SecurityWorkflowUser;
   }) => Promise<void>;
-  sendUserAccountApproved: (params: { email: string }) => Promise<void>;
+  sendUserAccountApproved: (params: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  }) => Promise<void>;
 };

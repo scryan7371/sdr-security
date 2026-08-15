@@ -33,11 +33,15 @@ describe("SecurityAuthController", () => {
     const result = await controller.register({
       email: "user@example.com",
       password: "Secret123",
+      firstName: "Taylor",
+      lastName: "Jordan",
     });
     expect(result).toEqual({ success: true });
     expect(service.register).toHaveBeenCalledWith({
       email: "user@example.com",
       password: "Secret123",
+      firstName: "Taylor",
+      lastName: "Jordan",
     });
   });
 

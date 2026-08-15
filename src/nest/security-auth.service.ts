@@ -33,14 +33,18 @@ export class SecurityAuthService {
     }
 
     async register(params: {
-        email: string; password: string;
+        email: string; password: string; firstName: string; lastName: string;
     }): Promise<RegisterResponse> {
         const email = sanitizeEmail(params.email);
         const existing = await this.db.select().from(user).where(eq(user.email, email))
         if (existing.length > 0) {
             throw new BadRequestException("Email already in use");
         }
-        const appUser = await this.db.insert(user).values({email: email}).returning()
+        const appUser = await this.db.insert(user).values({
+            email: email,
+            firstName: params.firstName.trim(),
+            lastName: params.lastName.trim(),
+        }).returning()
         await this.db.insert(securityUser).values({
             userId: appUser[0].id,
             passwordHash: await hash(params.password, PASSWORD_ROUNDS),
@@ -48,13 +52,18 @@ export class SecurityAuthService {
         const verificationToken = await this.createEmailVerificationToken(appUser[0].id,);
         if (this.notifier.sendEmailVerification) {
             await this.notifier.sendEmailVerification({
-                email: appUser[0].email, token: verificationToken,
+                email: appUser[0].email,
+                token: verificationToken,
+                firstName: appUser[0].firstName,
+                lastName: appUser[0].lastName,
             });
         }
         return {
             success: true, user: {
                 id: appUser[0].id,
                 email: appUser[0].email,
+                firstName: appUser[0].firstName,
+                lastName: appUser[0].lastName,
                 roles: await this.getUserRoleKeys(appUser[0].id)
             }, debugToken: verificationToken,
         };
@@ -208,10 +217,17 @@ export class SecurityAuthService {
             expiresAt: refreshTokenExpiresAt,
         });
         const theUser = await this.db.select({
-            id: user.id, email: user.email
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
         }).from(user).where(eq(user.id, userId));
         const safeUser = {
-            id: theUser[0].id, email: theUser[0].email, roles: roles
+            id: theUser[0].id,
+            email: theUser[0].email,
+            firstName: theUser[0].firstName,
+            lastName: theUser[0].lastName,
+            roles: roles
         } as SafeUser
         return {
             accessToken,

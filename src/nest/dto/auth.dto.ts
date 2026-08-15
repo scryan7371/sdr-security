@@ -6,6 +6,12 @@ export class RegisterDto {
 
   @ApiProperty({ example: "StrongPass1" })
   password!: string;
+
+  @ApiProperty({ example: "Taylor" })
+  firstName!: string;
+
+  @ApiProperty({ example: "Jordan" })
+  lastName!: string;
 }
 
 export class LoginDto {

@@ -171,7 +171,10 @@ describe("SecurityAuthService", () => {
         userRolesRepo.find.mockResolvedValue([]);
         rolesRepo.find.mockResolvedValue([]);
         const result = await service.register({
-            email: "USER@example.com", password: "Secret123",
+            email: "USER@example.com",
+            password: "Secret123",
+            firstName: "Taylor",
+            lastName: "Jordan",
         });
         expect(result.success).toBe(true);
         expect(appUsersRepo.create).toHaveBeenCalledWith(expect.objectContaining({email: "user@example.com"}),);
@@ -182,7 +185,9 @@ describe("SecurityAuthService", () => {
         appUsersRepo.findOne.mockResolvedValue(makeUser());
         await expect(service.register({
             email: "user@example.com",
-            password: "Secret123"
+            password: "Secret123",
+            firstName: "Taylor",
+            lastName: "Jordan",
         }),).rejects.toBeInstanceOf(BadRequestException);
     });
     it("handles login success and auth failures", async () => {

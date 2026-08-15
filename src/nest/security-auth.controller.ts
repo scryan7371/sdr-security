@@ -27,13 +27,16 @@ export class SecurityAuthController {
     }
 
     @Post("register") @ApiOperation({summary: "Register a new user"}) @ApiBody({type: RegisterDto}) async register(@Body() body: {
-        email?: string; password?: string;
+        email?: string; password?: string; firstName?: string; lastName?: string;
     },) {
-        if (!body.email || !body.password) {
-            throw new BadRequestException("Email and password are required");
+        if (!body.email || !body.password || !body.firstName?.trim() || !body.lastName?.trim()) {
+            throw new BadRequestException("Email, password, firstName, and lastName are required");
         }
         return this.authService.register({
-            email: body.email, password: body.password,
+            email: body.email,
+            password: body.password,
+            firstName: body.firstName.trim(),
+            lastName: body.lastName.trim(),
         });
     }
 

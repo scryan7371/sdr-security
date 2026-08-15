@@ -51,6 +51,8 @@ describe("createSecurityClient", () => {
     await client.register({
       email: "user@example.com",
       password: "Secret123",
+      firstName: "Taylor",
+      lastName: "Jordan",
     });
 
     expect(fetchImpl).toHaveBeenCalledWith(
