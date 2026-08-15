@@ -4,6 +4,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -34,6 +36,7 @@ export class SecurityWorkflowsController {
   constructor(private readonly workflowsService: SecurityWorkflowsService) {}
 
   @Post("users/:id/email-verified")
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Mark user email as verified and notify admins" })
   async markEmailVerified(@Param("id") id: string) {
     return this.workflowsService.markEmailVerifiedAndNotifyAdmins(id);

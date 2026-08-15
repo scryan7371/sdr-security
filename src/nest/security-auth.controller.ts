@@ -1,5 +1,5 @@
 import {
-    BadRequestException, Body, Controller, Get, Post, Query, Req, UseGuards,
+    BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, UseGuards,
 } from "@nestjs/common";
 import {
     ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiTags,
@@ -37,7 +37,7 @@ export class SecurityAuthController {
         });
     }
 
-    @Post("login") @ApiOperation({summary: "Login with email/password"}) @ApiBody({type: LoginDto}) async login(@Body() body: {
+    @Post("login") @HttpCode(HttpStatus.OK) @ApiOperation({summary: "Login with email/password"}) @ApiBody({type: LoginDto}) async login(@Body() body: {
         email?: string;
         password?: string
     }) {
@@ -49,7 +49,7 @@ export class SecurityAuthController {
         });
     }
 
-    @Post("refresh") @ApiOperation({summary: "Refresh access token"}) @ApiBody({type: RefreshDto}) async refresh(@Body() body: {
+    @Post("refresh") @HttpCode(HttpStatus.OK) @ApiOperation({summary: "Refresh access token"}) @ApiBody({type: RefreshDto}) async refresh(@Body() body: {
         refreshToken?: string
     }) {
         if (!body.refreshToken) {
@@ -58,13 +58,13 @@ export class SecurityAuthController {
         return this.authService.refreshAuthToken(body.refreshToken);
     }
 
-    @UseGuards(SecurityJwtGuard) @Post("logout") @ApiOperation({summary: "Logout user"}) @ApiBearerAuth() @ApiBody({type: LogoutDto}) async logout(@Body() body: {
+    @UseGuards(SecurityJwtGuard) @Post("logout") @HttpCode(HttpStatus.OK) @ApiOperation({summary: "Logout user"}) @ApiBearerAuth() @ApiBody({type: LogoutDto}) async logout(@Body() body: {
         refreshToken?: string
     }) {
         return this.authService.logout(body.refreshToken);
     }
 
-    @UseGuards(SecurityJwtGuard) @Post("change-password") @ApiOperation({summary: "Change password for authenticated user"}) @ApiBearerAuth() @ApiBody({type: ChangePasswordDto}) async changePassword(@Req() request: AuthedRequest, @Body() body: {
+    @UseGuards(SecurityJwtGuard) @Post("change-password") @HttpCode(HttpStatus.OK) @ApiOperation({summary: "Change password for authenticated user"}) @ApiBearerAuth() @ApiBody({type: ChangePasswordDto}) async changePassword(@Req() request: AuthedRequest, @Body() body: {
         currentPassword?: string;
         newPassword?: string
     },) {
@@ -78,7 +78,7 @@ export class SecurityAuthController {
         });
     }
 
-    @Post("forgot-password") @ApiOperation({summary: "Request password reset token by email"}) @ApiBody({type: ForgotPasswordDto}) async forgotPassword(@Body() body: {
+    @Post("forgot-password") @HttpCode(HttpStatus.OK) @ApiOperation({summary: "Request password reset token by email"}) @ApiBody({type: ForgotPasswordDto}) async forgotPassword(@Body() body: {
         email?: string
     }) {
         if (!body.email) {
@@ -87,7 +87,7 @@ export class SecurityAuthController {
         return this.authService.requestForgotPassword(body.email);
     }
 
-    @Post("reset-password") @ApiOperation({summary: "Reset password with token"}) @ApiBody({type: ResetPasswordDto}) async resetPassword(@Body() body: {
+    @Post("reset-password") @HttpCode(HttpStatus.OK) @ApiOperation({summary: "Reset password with token"}) @ApiBody({type: ResetPasswordDto}) async resetPassword(@Body() body: {
         token?: string;
         newPassword?: string
     }) {

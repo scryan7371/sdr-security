@@ -1,4 +1,4 @@
-import { PATH_METADATA } from "@nestjs/common/constants";
+import { HTTP_CODE_METADATA, PATH_METADATA } from "@nestjs/common/constants";
 import { describe, expect, it } from "vitest";
 import { SecurityWorkflowsController } from "./security-workflows.controller";
 
@@ -26,5 +26,14 @@ describe("SecurityWorkflowsController route metadata", () => {
     expect(routePath("setUserRoles")).toBe("users/:userId/roles");
     expect(routePath("assignUserRole")).toBe("users/:userId/roles");
     expect(routePath("removeUserRole")).toBe("users/:userId/roles/:role");
+  });
+
+  it("returns 200 when marking an existing user email as verified", () => {
+    expect(
+      Reflect.getMetadata(
+        HTTP_CODE_METADATA,
+        SecurityWorkflowsController.prototype.markEmailVerified as object,
+      ),
+    ).toBe(200);
   });
 });
