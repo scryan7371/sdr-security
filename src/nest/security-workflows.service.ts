@@ -15,7 +15,7 @@ export class SecurityWorkflowsService {
     async markEmailVerifiedAndNotifyAdmins(userId: string) {
         await this.db.update(securityUser).set({
             emailVerifiedAt: new Date(), emailVerificationToken: null
-        }).where(eq(securityUser.id, userId))
+        }).where(eq(securityUser.userId, userId))
         const theUser = await this.db.select().from(user).where(eq(user.id, userId));
         if (!theUser) {
             throw new NotFoundException("User not found");
@@ -38,7 +38,7 @@ export class SecurityWorkflowsService {
     }
 
     async setAdminApprovalAndNotifyUser(userId: string, approved: boolean) {
-        await this.db.update(securityUser).set({adminApprovedAt: approved ? new Date() : null},).where(eq(securityUser.id, userId))
+        await this.db.update(securityUser).set({adminApprovedAt: approved ? new Date() : null},).where(eq(securityUser.userId, userId))
         const theUser = await this.db.select().from(user).where(eq(user.id, userId));
         if (!theUser) {
             throw new NotFoundException("User not found");
@@ -149,7 +149,7 @@ export class SecurityWorkflowsService {
     }
 
     async setUserActive(userId: string, active: boolean) {
-        await this.db.update(securityUser).set({active: active}).where(eq(securityUser.id, userId));
+        await this.db.update(securityUser).set({active: active}).where(eq(securityUser.userId, userId));
         return {success: true as const, userId, active};
     }
 

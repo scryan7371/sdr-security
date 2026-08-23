@@ -132,6 +132,9 @@ const setup = (
         rolesRepo,
         userRolesRepo,
     });
+    const workflowsService = {
+        markEmailVerifiedAndNotifyAdmins: vi.fn(async () => ({success: true})),
+    };
     const service = new SecurityAuthService(db as never, {
         jwtSecret: "secret",
         accessTokenExpiresIn: "15m",
@@ -140,7 +143,7 @@ const setup = (
         requireAdminApproval: true,
         passwordResetTokenExpiresInMinutes: 30,
         ...optionOverrides,
-    }, notifier as never,);
+    }, notifier as never, workflowsService as never,);
     return {
         service,
         appUsersRepo,
@@ -150,6 +153,7 @@ const setup = (
         rolesRepo,
         userRolesRepo,
         notifier,
+        workflowsService,
     };
 };
 describe("SecurityAuthService", () => {
@@ -339,13 +343,14 @@ describe("SecurityAuthService", () => {
         await expect(service.resetPassword("bad", "x")).rejects.toThrow("Invalid password reset token",);
     });
     it("verifies email token and reads user roles", async () => {
-        const {service, securityUsersRepo, userRolesRepo, rolesRepo} = setup();
+        const {service, securityUsersRepo, userRolesRepo, rolesRepo, workflowsService} = setup();
         securityUsersRepo.findOne.mockResolvedValue(makeSecurityUser());
         userRolesRepo.find.mockResolvedValue([{roleId: "r1"}]);
         rolesRepo.find.mockResolvedValue([{id: "r1", roleKey: "coach"}]);
         await expect(service.verifyEmailByToken("token-bytes")).resolves.toEqual({
             success: true,
         });
+        expect(workflowsService.markEmailVerifiedAndNotifyAdmins).toHaveBeenCalledWith("user-1");
         await expect(service.getMyRoles("user-1")).resolves.toEqual({
             userId: "user-1", roles: ["COACH"],
         });

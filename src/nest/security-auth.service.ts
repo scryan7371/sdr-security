@@ -9,6 +9,7 @@ import {SecurityAuthModuleOptions} from "./security-auth.options";
 import {SECURITY_AUTH_OPTIONS} from "./security-auth.constants";
 import {SECURITY_WORKFLOW_NOTIFIER} from "./tokens";
 import {SecurityWorkflowNotifier} from "./contracts";
+import {SecurityWorkflowsService} from "./security-workflows.service";
 import {SECURITY_DRIZZLE_DB, SecurityDatabase} from "./security-drizzle.module";
 import {
     passwordResetToken,
@@ -29,7 +30,7 @@ const PASSWORD_ROUNDS = 12;
 
 @Injectable()
 export class SecurityAuthService {
-    constructor(@Inject(SECURITY_DRIZZLE_DB) private readonly db: SecurityDatabase, @Inject(SECURITY_AUTH_OPTIONS) private readonly options: SecurityAuthModuleOptions, @Inject(SECURITY_WORKFLOW_NOTIFIER) private readonly notifier: SecurityWorkflowNotifier,) {
+    constructor(@Inject(SECURITY_DRIZZLE_DB) private readonly db: SecurityDatabase, @Inject(SECURITY_AUTH_OPTIONS) private readonly options: SecurityAuthModuleOptions, @Inject(SECURITY_WORKFLOW_NOTIFIER) private readonly notifier: SecurityWorkflowNotifier, private readonly workflowsService: SecurityWorkflowsService,) {
     }
 
     async register(params: {
@@ -174,10 +175,7 @@ export class SecurityAuthService {
         if (user.length === 0) {
             throw new BadRequestException("Invalid verification token");
         }
-        await this.db.update(securityUser).set({
-            emailVerifiedAt: new Date(), emailVerificationToken: null
-        }).where(eq(securityUser.userId, user[0].userId));
-        return {success: true as const};
+        return this.workflowsService.markEmailVerifiedAndNotifyAdmins(user[0].userId);
     }
 
     async getMyRoles(userId: string) {
