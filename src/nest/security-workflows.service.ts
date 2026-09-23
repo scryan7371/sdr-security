@@ -38,6 +38,13 @@ export class SecurityWorkflowsService {
     }
 
     async setAdminApprovalAndNotifyUser(userId: string, approved: boolean) {
+        const currentSecurityUser = await this.db
+            .select()
+            .from(securityUser)
+            .where(eq(securityUser.userId, userId));
+        if (approved && currentSecurityUser[0]?.adminApprovedAt) {
+            return {success: true as const, notified: false as const};
+        }
         await this.db.update(securityUser).set({adminApprovedAt: approved ? new Date() : null},).where(eq(securityUser.userId, userId))
         const theUser = await this.db.select().from(user).where(eq(user.id, userId));
         if (!theUser) {
