@@ -6,3 +6,5 @@ export * from "./schemas/refresh-token.schema";
 export * from "./schemas/security-role.schema";
 export * from "./schemas/security-user.schema";
 export * from "./schemas/security-user-role.schema";
+
+export * from "./schemas/security-social.schema";

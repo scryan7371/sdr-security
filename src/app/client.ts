@@ -1,4 +1,7 @@
 import type {
+  SocialStartRequest,
+  SocialFinishResponse,
+  SocialProvider,
   AdminNotificationResponse,
   AuthResponse,
   DebugCodeResponse,
@@ -71,6 +74,12 @@ export const createSecurityClient = (options: SecurityClientOptions) => {
         body: JSON.stringify(payload),
       }),
 
+    signInMethod: () => request<{method: "password" | SocialProvider}>("/security/auth/social/method"),
+    socialProviders: () => request<{providers: SocialProvider[]}>("/security/auth/social/providers"),
+    startSocialSignIn: (payload: SocialStartRequest) => request<{authorizationUrl: string}>("/security/auth/social/start", {method: "POST", body: JSON.stringify(payload)}),
+    finishSocialSignIn: (payload: {ticket: string; codeVerifier: string}) => request<SocialFinishResponse>("/security/auth/social/finish", {method: "POST", body: JSON.stringify(payload)}),
+
+    /** @deprecated Legacy host endpoint. Use startSocialSignIn and finishSocialSignIn. */
     loginWithGoogle: (payload: { idToken: string }) =>
       request<AuthResponse>("/auth/login/google", {
         method: "POST",

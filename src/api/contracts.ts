@@ -32,3 +32,8 @@ export type UserActiveResponse = {
 export type AdminNotificationResponse = {
     success: true; notified: boolean;
 };
+
+/** Browser-safe social sign-in contracts. */
+export type SocialProvider = "google" | "apple";
+export type SocialStartRequest = {provider: SocialProvider; returnUrl: string; codeChallenge: string};
+export type SocialFinishResponse = {status: "authenticated"; auth: AuthResponse} | {status: "pending_approval"};

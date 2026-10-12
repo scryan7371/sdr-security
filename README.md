@@ -347,3 +347,15 @@ workflow's npm token is expired, revoked, or missing publish permission.
 If the failed version has not been published, do not bump the package version
 or create another tag. Re-run the existing tagged workflow after replacing the
 secret.
+
+## Social sign-in (Google and Apple)
+
+`SecurityAuthModule.forRoot({auth: {..., social: {allowedReturnUrls, google?, apple?}}})` enables server-mediated authorization-code sign-in. `google` takes `clientId`, `clientSecret`, and `callbackUrl`; `apple` takes `clientId` (Services ID), `teamId`, `keyId`, `privateKey`, and `callbackUrl`. Use exact allowlisted application return URLs. Keep all secrets on the API. Providers are disabled when omitted.
+
+Endpoints under `/security/auth/social`: `GET providers`, `POST start` (`provider`, `returnUrl`, S256 `codeChallenge`), `GET google/callback`, `POST apple/callback` (URL-encoded), `POST finish` (`ticket`, `codeVerifier`), and authenticated `GET method`. Finish returns `authenticated` with `auth`, or `pending_approval`. The browser-safe client exposes these calls as `socialProviders`, `startSocialSignIn`, `finishSocialSignIn`, and `signInMethod`.
+
+The caller must generate and keep its verifier locally before starting, verify the returned callback destination, and exchange the single-use ticket within 60 seconds. Authorization state expires after 10 minutes. App JWTs never appear in redirect URLs. The Google flow uses provider PKCE; both providers use state and nonce validation with fixed issuer/JWKS endpoints and RS256 signature verification.
+
+Each account has exactly one method chosen at signup. Existing rows migrate to `password`; provider subject identifiers are stable identities, not email-based account linking. Existing-email social signup is rejected. Password login/change/reset cannot add password access to provider accounts. Social signup verifies email but preserves activation and admin-approval requirements. No method-switching or linking endpoint exists.
+
+Run migrations before upgrading the API. New security-owned tables cascade identities when app users are deleted. Run `npm run test:db` with `.env.test` pointing to a local `*_test` database, or set `SECURITY_TEST_ENV_FILE` to an existing test env file. Database tests use a temporary schema and real PostgreSQL; provider credentials and interactive consent are still needed to verify live Google/Apple login.

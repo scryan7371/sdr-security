@@ -6,6 +6,7 @@ export const securityUser = pgTable('security_users', {
     id: uuid('id')
         .primaryKey()
         .$defaultFn(() => uuidv7()),
+    signInMethod: varchar({length: 16}).notNull().default("password").$type<"password" | "google" | "apple">(),
     passwordHash: varchar().notNull(),
     active: boolean().notNull().default(true),
     userId: uuid().notNull().unique().references(() => user.id, {onDelete: "cascade"}),

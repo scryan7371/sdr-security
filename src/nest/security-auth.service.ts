@@ -19,7 +19,7 @@ import {
     securityUserRole,
     user
 } from "../drizzle";
-import {eq, inArray, isNull} from "drizzle-orm";
+import {eq, inArray, isNull, sql} from "drizzle-orm";
 import {
     AuthResponse, normalizeRoleName, RegisterResponse, SafeUser, sanitizeEmail
 } from "../api";
@@ -37,7 +37,7 @@ export class SecurityAuthService {
         email: string; password: string; firstName: string; lastName: string;
     }): Promise<RegisterResponse> {
         const email = sanitizeEmail(params.email);
-        const existing = await this.db.select().from(user).where(eq(user.email, email))
+        const existing = await this.db.select().from(user).where(sql`lower(${user.email}) = ${email}`)
         if (existing.length > 0) {
             throw new BadRequestException("Email already in use");
         }
@@ -74,13 +74,16 @@ export class SecurityAuthService {
         email: string; password: string;
     }): Promise<AuthResponse> {
         const email = sanitizeEmail(params.email);
-        const appUser = await this.db.select().from(user).where(eq(user.email, email));
+        const appUser = await this.db.select().from(user).where(sql`lower(${user.email}) = ${email}`);
         if (appUser.length === 0) {
             throw new UnauthorizedException("Invalid credentials");
         }
         const theSecurityUser = await this.db.select().from(securityUser).where(eq(securityUser.userId, appUser[0].id))
         if (theSecurityUser.length === 0) {
             throw new UnauthorizedException("Invalid credentials");
+        }
+        if (theSecurityUser[0].signInMethod && theSecurityUser[0].signInMethod !== "password") {
+            throw new UnauthorizedException("Use the sign-in method chosen at signup");
         }
         const ok = await compare(params.password, theSecurityUser[0].passwordHash);
         if (!ok) {
@@ -126,6 +129,9 @@ export class SecurityAuthService {
         if (theSecurityUser.length === 0) {
             throw new BadRequestException("User not found");
         }
+        if (theSecurityUser[0].signInMethod && theSecurityUser[0].signInMethod !== "password") {
+            throw new BadRequestException("Password changes are unavailable for social sign-in accounts");
+        }
         const ok = await compare(params.currentPassword, theSecurityUser[0].passwordHash);
         if (!ok) {
             throw new UnauthorizedException("Current password is incorrect");
@@ -136,12 +142,15 @@ export class SecurityAuthService {
 
     async requestForgotPassword(emailInput: string) {
         const email = sanitizeEmail(emailInput);
-        const appUser = await this.db.select().from(user).where(eq(user.email, email));
+        const appUser = await this.db.select().from(user).where(sql`lower(${user.email}) = ${email}`);
         if (appUser.length === 0) {
             return {success: true as const};
         }
         const theSecurityUser = await this.db.select().from(securityUser).where(eq(securityUser.userId, appUser[0].id))
         if (theSecurityUser.length === 0) {
+            return {success: true as const};
+        }
+        if (theSecurityUser[0].signInMethod && theSecurityUser[0].signInMethod !== "password") {
             return {success: true as const};
         }
         const token = randomBytes(EMAIL_TOKEN_BYTES).toString("hex");
@@ -165,6 +174,10 @@ export class SecurityAuthService {
         if (reset.length === 0 || reset[0].usedAt || reset[0].expiresAt.getTime() <= Date.now()) {
             throw new BadRequestException("Invalid password reset token");
         }
+        const [account] = await this.db.select().from(securityUser).where(eq(securityUser.userId, reset[0].userId));
+        if (!account || (account.signInMethod && account.signInMethod !== "password")) {
+            throw new BadRequestException("Password reset is unavailable for this account");
+        }
         await this.db.update(securityUser).set({passwordHash: await hash(newPassword, PASSWORD_ROUNDS)}).where(eq(securityUser.userId, reset[0].userId));
         await this.db.update(passwordResetToken).set({usedAt: new Date()}).where(eq(passwordResetToken.id, reset[0].id))
         return {success: true as const};
@@ -185,6 +198,20 @@ export class SecurityAuthService {
     async getUserIdByVerificationToken(token: string): Promise<string | null> {
         const user = await this.db.select().from(securityUser).where(eq(securityUser.emailVerificationToken, token));
         return user[0]?.userId ?? null;
+    }
+
+    /** Only call after an identity has been verified by a trusted server-side flow. */
+    async loginVerifiedUser(userId: string): Promise<AuthResponse> {
+        await this.assertUserCanAuthenticate(userId);
+        const [account] = await this.db.select().from(user).where(eq(user.id, userId));
+        if (!account) throw new UnauthorizedException("User not found");
+        return this.issueTokens(account.id, account.email);
+    }
+
+    async assertUserCanAuthenticate(userId: string): Promise<void> {
+        const [account] = await this.db.select().from(securityUser).where(eq(securityUser.userId, userId));
+        if (!account) throw new UnauthorizedException("User not found");
+        this.assertCanAuthenticate(account.active, account.emailVerifiedAt, account.adminApprovedAt);
     }
 
     private assertCanAuthenticate(isActive: boolean, emailVerifiedAt: Date | null, adminApprovedAt: Date | null) {

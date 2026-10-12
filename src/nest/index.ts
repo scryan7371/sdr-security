@@ -12,3 +12,6 @@ export * from "./security-workflows.service";
 export * from "./security-workflows.controller";
 export * from "./security-workflows.module";
 export * from "./security-drizzle.module";
+
+export * from "./security-social.options";
+export * from "./security-social.service";

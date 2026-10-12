@@ -11,6 +11,9 @@ import {SecurityWorkflowsController} from "./security-workflows.controller";
 import {SecurityWorkflowsService} from "./security-workflows.service";
 import {SECURITY_WORKFLOW_NOTIFIER} from "./tokens";
 
+import {SecuritySocialService} from "./security-social.service";
+import {SecuritySocialController} from "./security-social.controller";
+
 const noopNotifier: SecurityWorkflowNotifier = {
     sendEmailVerification: async () => undefined,
     sendPasswordReset: async () => undefined,
@@ -31,13 +34,14 @@ export class SecurityAuthModule {
         };
         return {
             module: SecurityAuthModule,
-            controllers: [SecurityAuthController, SecurityWorkflowsController],
+            controllers: [SecurityAuthController, SecurityWorkflowsController, SecuritySocialController],
             providers: [
                 {
                     provide: SECURITY_AUTH_OPTIONS,
                     useValue: options.auth,
                 },
                 SecurityAuthService,
+                SecuritySocialService,
                 SecurityWorkflowsService,
                 SecurityJwtGuard,
                 SecurityAdminGuard,
@@ -46,6 +50,7 @@ export class SecurityAuthModule {
             exports: [
                 SECURITY_AUTH_OPTIONS,
                 SecurityAuthService,
+                SecuritySocialService,
                 SecurityWorkflowsService,
                 SecurityJwtGuard,
                 SecurityAdminGuard,
