@@ -29,6 +29,9 @@ fi
 echo "Running tests..."
 npm test
 
+echo "Running coverage..."
+npm coverage
+
 echo "Building package..."
 npm run build
 
