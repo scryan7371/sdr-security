@@ -30,7 +30,7 @@ echo "Running tests..."
 npm test
 
 echo "Running coverage..."
-npm coverage
+npm run coverage
 
 echo "Building package..."
 npm run build
